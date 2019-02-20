@@ -9,7 +9,7 @@ class Database:
 
     def __init__(self):
         config = configparser.ConfigParser()
-        config.read_file(open('Global.conf'))
+        config.read_file(open('../../data/Global.conf'))
         self.file = config.get('Database', 'file')
         print(self.file)
 

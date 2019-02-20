@@ -1,11 +1,10 @@
-import os
-import pdb
 import configparser
-import Database
-import rpyc
-import threading
 import signal
+
+import rpyc
 from rpyc.utils.server import ThreadedServer
+
+from src.server import Database
 
 
 def terminate_handler():
@@ -45,7 +44,7 @@ if __name__ == "__main__":
     test = StorageNode()
 
     config = configparser.ConfigParser()
-    config.read_file(open('Global.conf'))
+    config.read_file(open('../../data/Global.conf'))
     portNumber = int(config.get('GeneralConfiguration', 'ClientServerPort'))
     print(portNumber)
 
