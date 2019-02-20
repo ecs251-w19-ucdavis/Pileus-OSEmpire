@@ -32,7 +32,7 @@ class StorageNode(rpyc.Service):
 
     def exposed_put(self, key, value, timestamp):
         '''put is callable from client'''
-        result = self.__db.get_item(key, value, timestamp)
+        result = self.__db.set_item(key, value, timestamp)
         return result
 
     def exposed_get(self, key):
