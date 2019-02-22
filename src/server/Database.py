@@ -3,6 +3,8 @@ import configparser
 import os
 from threading import Thread
 
+#MetaData table contains status and version of all tables
+#Metadata Status: 0->Created, 1 -> Changed, 2->Deleted
 
 class Database:
     key_string_error = TypeError('Key/name must be a string!')
@@ -10,44 +12,202 @@ class Database:
     def __init__(self):
         config = configparser.ConfigParser()
         config.read_file(open('../../data/Global.conf'))
-        self.file = config.get('Database', 'file')
-        print(self.file)
+        self.__path = '../..' + config.get('Database', 'Path')
+        print(self.__path)
 
-        if os.path.exists(self.file):
-            self.db = json.load(open(self.file, 'rt'))
-        else:
-            '''Create an empty database. It will be saved to disk when a data is entered.'''
-            self.db = {}
+        if not os.path.exists(self.__path):
+            os.makedirs(self.__path)
+            # self.db = json.load(open(self.file, 'rt'))
 
-    def set_item(self, key, value, timestamp):
-        '''Set the str value of a key'''
+        metaTable = self.__path + 'metadata.meta'
+        if not os.path.exists(metaTable):
+            db = {}
+            self.dump(metaTable, db)
+
+    def update_metadata(self, table, status, version='-1'):
+        metaTable = self.__path + 'metadata.meta'
         try:
-            self.db[key] = {'value': value, 'timestamp': timestamp}
-            self.dump()
+            newVersion = 0
+            with open(metaTable, 'r') as fd:
+                db = json.load(fd)
+                if table in db:
+                    newVersion = int(db[table]['version']) + 1
+                if not version=='-1':
+                    newVersion = version
+
+            db[table] = {'version': newVersion, 'status': status}
+            self.dump(metaTable, db)
+            print('Database: MetaData was successfully updated.')
             return True
-        except KeyError:
+        except:
+            print('Database: Failed to update MetaData.')
             return False
 
-    def get_item(self, key):
+    def get_metadata(self):
+        metaTable = self.__path + 'metadata.meta'
+        db = {}
         try:
-            return self.db[key]
-        except KeyError:
+            with open(metaTable, 'r') as fd:
+                db = json.load(fd)
+        except:
+            print('Database: Failed to open MetaData.')
+            return db, False
+        return db, True
+
+    def create_table(self, tableName):
+        table = self.__path + tableName + '.json'
+        if os.path.exists(table):
+            print('Database: The table already exist!')
+            return False
+        else:
+            try:
+                db = {}
+                result = self.dump(table, db)
+                if not result:
+                    print('Database: Failed to create ' + tableName + ' table!')
+                    return False
+                result = self.update_metadata(tableName, '0')
+                if not result:
+                    #If it cannot update metadata, it will undo the table creation
+                    self.delete_table(table)
+                    print('Database: Failed to create ' + tableName + ' table!')
+                    return False
+                print('Database: ' + tableName + ' table was successfully created.')
+                return True
+            except:
+                print('Database: Failed to create ' + tableName + ' table!')
+                return False
+
+    def delete_table(self, tableName):
+        table = self.__path + tableName + '.json'
+        if os.path.exists(table):
+            try:
+                os.remove(table)
+                self.update_metadata(tableName, '2')
+                print('Database: ' + tableName + ' table was successfully deleted.')
+                return True
+            except:
+                print('Database: Failed to delete ' + tableName + ' table!')
+                return False
+        else:
+            print('Database: ' + tableName + ' table does not exist!')
             return False
 
-    def dump(self):
+    def open_table(self):
+        return True
+
+    def get_table(self, tableName):
+        table = self.__path + tableName + '.json'
+        if os.path.exists(table):
+            try:
+                tbl = {}
+                with open(table, 'r') as fd:
+                    tbl = json.load(fd)
+                return tbl
+            except:
+                print('Database: Failed to get ' + tableName + ' table (Maybe locked)!')
+                return False
+        else:
+            print('Database: ' + tableName + ' table does not exist!')
+            return False
+
+    def update_table(self, tableName, tableData, value):
+        table = self.__path + tableName + '.json'
+        backupTable = {}
+        if os.path.exists(table):
+            backupTable = self.get_table(tableName)
+        print(tableData)
+        status = value['status']
+        if status == '0':
+            result = self.create_table(tableName)
+        elif status == '1':
+
+            #cannot work with netref object, I need to copy that first
+            copiedTable = {}
+            for k in tableData:
+                temp = {}
+                temp['timestamp'] = tableData[k]['timestamp']
+                temp['value'] = tableData[k]['value']
+                copiedTable[k] = temp
+
+            result = self.dump(table, copiedTable)
+            if not result:
+                return False
+            result = self.update_metadata(tableName, value['status'], value['version'])
+            if not result:
+                #If couldn't update both table and metadata, it will restore the table to previous version
+                self.dump(tableName, backupTable)
+        elif status == '2':
+            result = self.delete_table(tableName)
+        if not result:
+            return False
+
+
+    def set_item(self, tableName, key, value, timestamp):
+        table = self.__path + tableName + '.json'
+        if os.path.exists(table):
+            try:
+                with open(table, 'r') as fd:
+                    db = json.load(fd)
+                    if key in db:
+                        if float(timestamp) < float(db[key]['timestamp']):
+                            print('Database: The new timestamp is older than the existing one!')
+                            return False
+                db[key] = {'value': value, 'timestamp': timestamp}
+                self.dump(table, db)
+                self.update_metadata(tableName, '1')
+                print('Database: ' + key + ' key was successfully added to ' + tableName + ' table.')
+                return True
+            except:
+                print('Database: Failed to put data into ' + tableName + ' table!')
+                return False
+        else:
+            print('Database: ' + tableName + ' table does not exist!')
+            return False
+
+    def get_item(self, tableName, key):
+        table = self.__path + tableName + '.json'
+        if os.path.exists(table):
+            try:
+                with open(table) as fd:
+                    db = json.load(fd)
+                    if key in db:
+                        value = db[key]
+                    else:
+                        print('Database: ' + key + ' key does not exist in  ' + tableName + ' table!')
+                        return False
+                return value
+            except:
+                print('Database: Failed to get data from ' + tableName + ' table!')
+                return False
+        else:
+            print('Database: ' + tableName + ' table does not exist!')
+            return False
+
+
+    def dump(self, tableName, database):
         '''Dump memory db to file'''
-        json.dump(self.db, open(self.file, 'wt'))
-        # self.dthread = Thread(
-        #     target=json.dump,
-        #     args=(self.db, open(self.file, 'wt')))
-        # self.dthread.start()
-        # self.dthread.join()
+        try:
+            json.dump(database, open(tableName, 'wt'))
+            # self.dthread = Thread(
+            #     target=json.dump,
+            #     args=(self.db, open(self.file, 'wt')))
+            # self.dthread.start()
+            # self.dthread.join()
+        except:
+            print('Database: Failed to dump database into file!')
+            return False
         return True
 
 
 if __name__ == "__main__":
     a = Database()
-    a.set_item('1','ewsdfd','12')
-    a.set_item('2','asda','4')
-    print(a.get_item('2'))
+    a.create_table('sha')
+    a.create_table('te')
+    a.set_item('sha', '1', 'ewsdfd', '12')
+    a.set_item('sha', '2', 'asda', '3.5')
+    a.set_item('sdfe','r','ere','r')
+    print(a.get_item('sha','2'))
+    print(a.get_item('shad', '2'))
+    print(a.get_item('sha', '3'))
     del a
