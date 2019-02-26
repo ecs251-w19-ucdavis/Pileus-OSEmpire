@@ -12,7 +12,7 @@ class ReplicationAgent(rpyc.Service):
         config = configparser.ConfigParser()
         config.read_file(open('../../data/Global.conf'))
         storagePortNumber = int(config.get('GeneralConfiguration', 'ClientServerPort'))
-        replicationPortNumber = int(config.get('ReplicationAgent', 'ReplicatoinPort'))
+        replicationPortNumber = int(config.get('ReplicationAgent', 'ReplicationPort'))
         syncPeriod = int(config.get('ReplicationAgent', 'SyncPeriod'))
         primaryAddress = config.get('Primary', 'IP')
         secondaryAddresses = config.get('Secondary', 'IP').split(';')
