@@ -5,7 +5,7 @@ import threading
 import pdb
 
 #In current version, Replication Agent of primary storage does not do anything useful.
-#Replication Agents in secondary nodes connect directly to priamry storage node, not its replication agent
+#Replication Agents in secondary nodes connect directly to primary storage node, not its replication agent
 class ReplicationAgent(rpyc.Service):
 
     def __init__(self, primary, db):

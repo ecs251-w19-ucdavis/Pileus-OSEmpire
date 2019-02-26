@@ -6,19 +6,26 @@ class Session:
     def __init__(self, table_name, sla):
         self.table_name = table_name
         self.sla = sla
+        self.server = None
 
-    def connect_to_server(self):
+    @staticmethod
+    def connect_to_server():
         config = configparser.ConfigParser()
         config.read_file(open('../../data/Global.conf'))
 
         # Get the ip address and the port number
         ip = config.get('Primary', 'IP')
-        port = config.get('GeneralConfiguration', 'ClientServerPort')
+        port = int(config.get('GeneralConfiguration', 'ClientServerPort'))
 
         # Get the connection object
         connection = rpyc.connect(ip, port=port)
 
         return connection.root
+
+    def disconnect(self):
+        # Not really sure how this works.
+        self.connection = None
+
 
 
 if __name__ == "__main__":
