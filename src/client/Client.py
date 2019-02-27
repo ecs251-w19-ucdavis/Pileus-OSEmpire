@@ -1,21 +1,36 @@
 from ..client.Session import Session
 from ..client.SLA import SLA
+import time
 import configparser
-import rpyc
 
 class Client:
 
-    def __init__(self):
-        None
+    def __init__(self, monitor, config_file_path):
+        self.monitor = monitor
+        self.config_file_path = config_file_path
+        self.config = configparser.ConfigParser()
+        with open(config_file_path, 'r') as read_file:
+            self.config.read_file(read_file)
+        self.secondary_nodes_ip_list = None
+        self.primary_node_ip = None
+
+
+    def set_nodes_ip_list(self):
+        # Get the ip address and the port number
+        self.primary = self.config.get('Primary', 'IP')
+        self.secondary_nodes_ip_list = self.config.get('Secondary', 'IPs')
+
+#    def __strong_check(self, key, acceptable_latency):
+        # can the primary node provide the value within the acceptable latency?
+
 
     @staticmethod
     def put(session, key, value):
         # TODO: need to handle errors
         # TODO: This should only go to the main storage node, not the secondaries
+        # TODO: provide a timestamp to the put method
 
-        server = Session.connect_to_server()
-
-        server.put(key, value)
+        session.put(key, value)
 
     @staticmethod
     def get(session, key, sla=None):
@@ -26,6 +41,9 @@ class Client:
             sla = session.sla
 
         value = session.server.get(session.table_name, key)
+
+        # TODO: return a condition code that indicates how well the SLA was met, including the consistency of the data
+        cc = None
 
         return value, None
 
