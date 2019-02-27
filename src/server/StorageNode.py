@@ -76,7 +76,7 @@ class StorageNode(rpyc.Service):
         if not result2:
             print('StorageNode: Failed to get high timestamp from Database!')
             return False
-        result['high timestamp'] = highTimestamp
+        result['high_timestamp'] = highTimestamp
         print(result)
         return result
 
