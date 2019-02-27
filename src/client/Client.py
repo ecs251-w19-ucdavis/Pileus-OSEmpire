@@ -1,5 +1,6 @@
 from ..client.Session import Session
 from ..client.SLA import SLA
+from ..client.Monitor import Monitor
 import time
 import configparser
 
@@ -14,7 +15,6 @@ class Client:
         self.secondary_nodes_ip_list = None
         self.primary_node_ip = None
 
-
     def set_nodes_ip_list(self):
         # Get the ip address and the port number
         self.primary = self.config.get('Primary', 'IP')
@@ -23,27 +23,46 @@ class Client:
 #    def __strong_check(self, key, acceptable_latency):
         # can the primary node provide the value within the acceptable latency?
 
-
-    @staticmethod
-    def put(session, key, value):
+    def put(self, session, key, value):
         # TODO: need to handle errors
         # TODO: This should only go to the main storage node, not the secondaries
         # TODO: provide a timestamp to the put method
 
-        session.put(key, value)
+        # Get the timestamp
+        start = time.time()
+        # Make the put call to the server, with [table_name, key, value, timestamp]
+        session.server.put(session.table_name, key, value, start)
+        end = time.time()
 
-    @staticmethod
-    def get(session, key, sla=None):
+        # compute the time elapsed between making the call and getting a return value
+        elapsed = end-start
+
+        # TODO: pass latency information to monitor
+        self.monitor.update_latency(session.ip_address, elapsed)
+
+    def get(self, session, key, sla=None):
         # Need to maintain a timestamp of storage nodes.
         # Timestamps are used to determine if a node can meet the consistency requirements
         # Need to return the value
         if sla is None:
             sla = session.sla
 
-        value = session.server.get(session.table_name, key)
+        start = time.time()
+        node_return = session.server.get(session.table_name, key)
+        end = time.time()
+        elapsed = end-start
+
+        # Extract value, timestamp of value, and high-timestamp of the node
+        value = node_return['value']
+        timestamp = node_return['timestamp']
+        high_timestamp = node_return['high_timestamp']
 
         # TODO: return a condition code that indicates how well the SLA was met, including the consistency of the data
         cc = None
+
+        # TODO: pass information to monitor
+
+        self.monitor.update_latency_and_hightimestamp(session.ip_address, elapsed, high_timestamp)
 
         return value, None
 
@@ -64,7 +83,7 @@ class Client:
     @staticmethod
     def open_table(name):
         # Return some table object
-        #TODO: need to deal with possible errors here
+        # TODO: need to deal with possible errors here
         server = Session.connect_to_server()
 
         return server.open_table(name)
