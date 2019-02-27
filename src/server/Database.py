@@ -1,6 +1,7 @@
 import json
 import configparser
 import os
+import time
 from threading import Thread
 
 #MetaData table contains status and version of all tables
@@ -23,6 +24,7 @@ class Database:
         if not os.path.exists(metaTable):
             db = {}
             self.dump(metaTable, db)
+            self.update_high_timestamp()
 
     def update_metadata(self, table, status, version='-1'):
         metaTable = self.__path + 'metadata.meta'
@@ -31,7 +33,7 @@ class Database:
             with open(metaTable, 'r') as fd:
                 db = json.load(fd)
                 if table in db:
-                    newVersion = int(db[table]['version']) + 1
+                    newVersion = float(db[table]['version']) + 1
                 if not version=='-1':
                     newVersion = version
 
@@ -42,6 +44,43 @@ class Database:
         except:
             print('Database: Failed to update MetaData.')
             return False
+
+    def update_high_timestamp(self, newHighTimestamp='0'):
+        metaTable = self.__path + 'metadata.meta'
+        table = '__high_timestamp'
+        try:
+            with open(metaTable, 'r') as fd:
+                db = json.load(fd)
+            if newHighTimestamp=='0':
+                # used when a primary node wants to update the local high timestamp
+                newTime = str(time.time())
+            else:
+                #used when a secondary node wants to update the high timestamp
+                newTime = newHighTimestamp
+
+            db[table] = {'version': newTime, 'status': '1'}
+            self.dump(metaTable, db)
+            print('Database: High timestamp was successfully updated.')
+            return True
+        except:
+            print('Database: Failed to update high timestamp.')
+            return False
+
+    def get_high_timestamp(self):
+        metaTable = self.__path + 'metadata.meta'
+        table = '__high_timestamp'
+        try:
+            with open(metaTable, 'r') as fd:
+                db = json.load(fd)
+                if table in db:
+                    highTimestamp = float(db[table]['version'])
+                else:
+                    print('Database: No __high_timestamp metadata available!')
+                    return False, 0
+            return True, highTimestamp
+        except:
+            print('Database: Failed to return high timestamp.')
+            return False, 0
 
     def get_metadata(self):
         metaTable = self.__path + 'metadata.meta'
@@ -61,6 +100,14 @@ class Database:
             return False
         else:
             try:
+                result = self.update_high_timestamp()
+                if not result:
+                    print('Database: Failed to update high timestamp table! Entire update was aborted.')
+                    return False
+            except:
+                print('Database: Failed to update high timestamp table! Entire update was aborted.')
+                return False
+            try:
                 db = {}
                 result = self.dump(table, db)
                 if not result:
@@ -72,6 +119,7 @@ class Database:
                     self.delete_table(table)
                     print('Database: Failed to create ' + tableName + ' table!')
                     return False
+
                 print('Database: ' + tableName + ' table was successfully created.')
                 return True
             except:
@@ -81,6 +129,14 @@ class Database:
     def delete_table(self, tableName):
         table = self.__path + tableName + '.json'
         if os.path.exists(table):
+            try:
+                result = self.update_high_timestamp()
+                if not result:
+                    print('Database: Failed to update high timestamp table! Entire update was aborted.')
+                    return False
+            except:
+                print('Database: Failed to update high timestamp table! Entire update was aborted.')
+                return False
             try:
                 os.remove(table)
                 self.update_metadata(tableName, '2')
@@ -146,6 +202,14 @@ class Database:
     def set_item(self, tableName, key, value, timestamp):
         table = self.__path + tableName + '.json'
         if os.path.exists(table):
+            try:
+                result = self.update_high_timestamp()
+                if not result:
+                    print('Database: Failed to update high timestamp table! Entire update was aborted.')
+                    return False
+            except:
+                print('Database: Failed to update high timestamp table! Entire update was aborted.')
+                return False
             try:
                 with open(table, 'r') as fd:
                     db = json.load(fd)

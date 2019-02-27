@@ -69,6 +69,15 @@ class StorageNode(rpyc.Service):
     def exposed_get(self, table, key):
         '''get is callable from client'''
         result = self.__db.get_item(table, key)
+        if not result:
+            print('StorageNode: Failed to get data from Database!')
+            return False
+        result2, highTimestamp = self.__db.get_high_timestamp()
+        if not result2:
+            print('StorageNode: Failed to get high timestamp from Database!')
+            return False
+        result['high timestamp'] = highTimestamp
+        print(result)
         return result
 
     def exposed_get_metadata(self):
@@ -97,7 +106,7 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read_file(open('../../data/Global.conf'))
     portNumber = int(config.get('GeneralConfiguration', 'ClientServerPort'))
-    replicationPortNumber = int(config.get('ReplicationAgent', 'ReplicatoinPort'))
+    replicationPortNumber = int(config.get('ReplicationAgent', 'ReplicationPort'))
 
     StorageNodeInstance = StorageNode(replicationPortNumber, primary=True)
 

@@ -15,7 +15,7 @@ class ReplicationAgent(rpyc.Service):
         replicationPortNumber = int(config.get('ReplicationAgent', 'ReplicationPort'))
         syncPeriod = int(config.get('ReplicationAgent', 'SyncPeriod'))
         primaryAddress = config.get('Primary', 'IP')
-        secondaryAddresses = config.get('Secondary', 'IP').split(';')
+        secondaryAddresses = config.get('Secondary', 'IPs').split(',')
 
         self.__StoragePortNumber = storagePortNumber
         self.__ReplicationPortNumber = replicationPortNumber
@@ -95,8 +95,11 @@ class ReplicationAgent(rpyc.Service):
                     for key in primary_metadata:
                         tableData = storageConnection.get_table(key)
                         if key in my_metadata:
+                            #We will update the high timestamp last to make sure it is consistent in worst case
+                            if key == '__high_timestamp':
+                                continue
                             if my_metadata[key]['version'] < primary_metadata[key]['version']:
-                                print(tableData)
+                                # print(tableData)
                                 result = self.__StorageDatabaseInstance.update_table(key, tableData, primary_metadata[key])
                                 if result:
                                     print('Replication Agent: ' + key + ' table is successfully updated.')
@@ -106,6 +109,13 @@ class ReplicationAgent(rpyc.Service):
                             result = self.__StorageDatabaseInstance.update_table(key, tableData, primary_metadata[key])
                             if result:
                                 print('Replication Agent: ' + key + ' table is successfully updated.')
+                    #To update the high timestamp
+                    key = '__high_timestamp'
+                    result = self.__StorageDatabaseInstance.update_high_timestamp(primary_metadata[key]['version'])
+                    if result:
+                        print('Replication Agent: ' + key + ' table is successfully updated.')
+                    else:
+                        print('Replication Agent: ' + key + ' table does not need update.')
             except:
                 print('Replication Agent: Failed to get data from Primary Storage Node!')
 
