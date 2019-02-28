@@ -20,8 +20,52 @@ class Client:
         self.primary = self.config.get('Primary', 'IP')
         self.secondary_nodes_ip_list = self.config.get('Secondary', 'IPs')
 
-#    def __strong_check(self, key, acceptable_latency):
-        # can the primary node provide the value within the acceptable latency?
+    def select_target(self, sla_list, node_list, key):
+        # This will be updated to keep track of which sla provides the highest utility
+        max_util = -1
+
+        # Add the best nodes to this list
+        best_nodes = list()
+
+        # Initialize with some large value for now, will be updated later
+        best_latency = 1000
+
+        # This will eventually contain the best sla and be returned
+        target_sla = None
+
+        # Loop through all of the SLAs
+        for sub_sla in sla_list:
+            # Loop through all of the known nodes. Should this include the primary?
+            for node in node_list:
+                # Compute the predicted utility for this node, given this sla
+                util = self.monitor.p_node_sla(node, sub_sla.consistency, sub_sla.latency, key) * sub_sla.utility
+
+                # If this has the highest utility seen so far
+                if util > max_util:
+                    # Update this as the sla we are looking for
+                    target_sla = sub_sla
+
+                    # Update the new maximum utility that we will try to beat
+                    max_util = util
+
+                    # Clear the previous best nodes, if any. Add only this new node to the list
+                    best_nodes.clear()
+                    best_nodes.append(node)
+
+                # If there was another node with the equivalent utility, add it to the list, along with the other ones.
+                elif util == max_util:
+                    best_nodes.append(node)
+
+        # Now go through all of the best nodes and choose by latency
+        for node in best_nodes:
+            if node.latency < best_latency:
+                best_nodes = node
+                best_latency = node.latency
+
+        # TODO: add some corner case handling, if all of the best nodes have the same latency
+
+        return target_sla, best_nodes
+
 
     def put(self, session, key, value):
         # TODO: need to handle errors
