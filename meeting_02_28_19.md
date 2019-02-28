@@ -12,11 +12,19 @@ Shahbaz:
 
 Greg:
 
+* Updated Put() in Client to pass proper values to server, measure
+ latency, and provide node latency information to Monitor on success.
+* Updated Get() in Client to pass proper values to server, measure 
+latency, extract data from server response object, and pass latency and 
+high-timestamp of node to Monitor.
+* Implemented basic Monitor class, which will be modified later.
+* Added new list variable to List class to store the ip-addresses of all
+ available nodes. 
 
 Nader:
 
 * Refining the design of monitors functions that measure the likelihood that the specified SLA meets its consistency and latency requirements.
-* Start testing the plateform on AWS instances.
+* Start testing the platform on AWS instances.
 
 
 **Doing this week:**
@@ -26,6 +34,16 @@ Shahbaz:
 * Implementing put log and sending put log to secondary storage nodes (instead of the whole tables that were changed) to improve the efficiency of replication agent update process.
 
 Greg:
+
+* Implement a better system for defining a consistency level, 
+specifically providing a minimum acceptable high-timestamp for each.
+* Complete full Get() function.
+* Figure out a way to tie consistency with a key. i.e., can this node 
+meet the consistency requirements for this specific key? Currently, 
+consistency is considered equal across an entire node, regardless of 
+key.
+* The Get() function should also return which of the SLAs were met and 
+which were not. Need to implement this.
 
 Nader:
 
