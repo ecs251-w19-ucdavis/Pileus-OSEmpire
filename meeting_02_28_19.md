@@ -15,6 +15,8 @@ Greg:
 
 Nader:
 
+* Refining the design of monitors functions that measure the likelihood that the specified SLA meets its consistency and latency requirements.
+* Start testing the plateform on AWS instances.
 
 
 **Doing this week:**
@@ -26,6 +28,8 @@ Shahbaz:
 Greg:
 
 Nader:
+
+* Modifying the get function to compute and return the round trip time (RTT) and other necessary information for monitor to function. 
 
 
 **Issues/Problems:**
