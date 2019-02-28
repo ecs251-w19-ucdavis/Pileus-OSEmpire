@@ -41,7 +41,7 @@ specifically providing a minimum acceptable high-timestamp for each.
 * Figure out a way to tie consistency with a key. i.e., can this node 
 meet the consistency requirements for this specific key? Currently, 
 consistency is considered equal across an entire node, regardless of 
-key.
+key. This detail is not clear enough in the paper.
 * The Get() function should also return which of the SLAs were met and 
 which were not. Need to implement this.
 
