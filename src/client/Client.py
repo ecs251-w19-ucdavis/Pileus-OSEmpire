@@ -31,14 +31,15 @@ class Client:
         # Get the timestamp
         start = time.time()
         # Make the put call to the server, with [table_name, key, value, timestamp]
-        session.server.put(session.table_name, key, value, start)
+        result_status = session.server.put(session.table_name, key, value, start)
         end = time.time()
 
         # compute the time elapsed between making the call and getting a return value
         elapsed = end-start
 
-        # TODO: pass latency information to monitor
-        self.monitor.update_latency(session.ip_address, elapsed)
+        # pass latency information to monitor
+        if result_status:
+            self.monitor.update_latency(session.ip_address, elapsed)
 
     def get(self, session, key, sla=None):
         # Need to maintain a timestamp of storage nodes.
