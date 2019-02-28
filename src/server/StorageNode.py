@@ -1,6 +1,6 @@
 import configparser
 import signal
-
+import time
 import rpyc
 from rpyc.utils.server import ThreadedServer
 from threading import Thread
@@ -56,6 +56,9 @@ class StorageNode(rpyc.Service):
 
     def exposed_open_table(self, table):
         return self.__db.open_table(table)
+
+    def exposed_get_probe(self):
+        return time.time()
 
     def exposed_put(self, table, key, value, timestamp):
         '''put is callable from client'''
