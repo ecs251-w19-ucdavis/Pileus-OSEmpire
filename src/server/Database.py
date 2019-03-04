@@ -2,6 +2,7 @@ import json
 import configparser
 import os
 import time
+import csv
 from threading import Thread
 
 #MetaData table contains status and version of all tables
@@ -20,17 +21,35 @@ class Database:
             os.makedirs(self.__path)
             # self.db = json.load(open(self.file, 'rt'))
 
-        metaTable = self.__path + 'metadata.meta'
-        if not os.path.exists(metaTable):
+        self.__metaTable = self.__path + 'metadata.meta'
+        if not os.path.exists(self.__metaTable):
             db = {}
-            self.dump(metaTable, db)
+            self.dump(self.__metaTable, db)
             self.update_high_timestamp()
 
+        self.__putLogTable = self.__path + 'put.log'
+        if not os.path.exists(self.__putLogTable):
+            # To create an empty put.log file
+            with open(self.__putLogTable, "w", newline='') as empty_csv:
+                em_csv = csv.writer(empty_csv, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+                pass
+
+    def update_put_log(self, tableName, key, value, timestamp, high_timestamp):
+        try:
+            row = [tableName, key, value, timestamp, high_timestamp]
+            with open(self.__putLogTable, 'a', newline='') as fd:
+                csv_writer = csv.writer(fd, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+                csv_writer.writerow(row)
+            print('Database: Row was succesfully added to the put.log.')
+            return True
+        except:
+            print('Database: Failed to update put.log!')
+            return False
+
     def update_metadata(self, table, status, version='-1'):
-        metaTable = self.__path + 'metadata.meta'
         try:
             newVersion = 0
-            with open(metaTable, 'r') as fd:
+            with open(self.__metaTable, 'r') as fd:
                 db = json.load(fd)
                 if table in db:
                     newVersion = float(db[table]['version']) + 1
@@ -38,7 +57,7 @@ class Database:
                     newVersion = version
 
             db[table] = {'version': newVersion, 'status': status}
-            self.dump(metaTable, db)
+            self.dump(self.__metaTable, db)
             print('Database: MetaData was successfully updated.')
             return True
         except:
@@ -46,10 +65,9 @@ class Database:
             return False
 
     def update_high_timestamp(self, newHighTimestamp='0'):
-        metaTable = self.__path + 'metadata.meta'
         table = '__high_timestamp'
         try:
-            with open(metaTable, 'r') as fd:
+            with open(self.__metaTable, 'r') as fd:
                 db = json.load(fd)
             if newHighTimestamp=='0':
                 # used when a primary node wants to update the local high timestamp
@@ -59,18 +77,18 @@ class Database:
                 newTime = newHighTimestamp
 
             db[table] = {'version': newTime, 'status': '1'}
-            self.dump(metaTable, db)
+            self.dump(self.__metaTable, db)
             print('Database: High timestamp was successfully updated.')
-            return True
+            return True, newTime
         except:
             print('Database: Failed to update high timestamp.')
-            return False
+            return False, newTime
+        return False, 0
 
     def get_high_timestamp(self):
-        metaTable = self.__path + 'metadata.meta'
         table = '__high_timestamp'
         try:
-            with open(metaTable, 'r') as fd:
+            with open(self.__metaTable, 'r') as fd:
                 db = json.load(fd)
                 if table in db:
                     highTimestamp = float(db[table]['version'])
@@ -83,10 +101,9 @@ class Database:
             return False, 0
 
     def get_metadata(self):
-        metaTable = self.__path + 'metadata.meta'
         db = {}
         try:
-            with open(metaTable, 'r') as fd:
+            with open(self.__metaTable, 'r') as fd:
                 db = json.load(fd)
         except:
             print('Database: Failed to open MetaData.')
@@ -203,7 +220,7 @@ class Database:
         table = self.__path + tableName + '.json'
         if os.path.exists(table):
             try:
-                result = self.update_high_timestamp()
+                result, newHighTimeStamp = self.update_high_timestamp()
                 if not result:
                     print('Database: Failed to update high timestamp table! Entire update was aborted.')
                     return False
@@ -214,16 +231,29 @@ class Database:
                 with open(table, 'r') as fd:
                     db = json.load(fd)
                     if key in db:
-                        if float(timestamp) < float(db[key]['timestamp']):
+                        if float(timestamp) <= float(db[key]['timestamp']):
                             print('Database: The new timestamp is older than the existing one!')
                             return False
                 db[key] = {'value': value, 'timestamp': timestamp}
                 self.dump(table, db)
-                self.update_metadata(tableName, '1')
                 print('Database: ' + key + ' key was successfully added to ' + tableName + ' table.')
-                return True
             except:
                 print('Database: Failed to put data into ' + tableName + ' table!')
+                return False
+
+            try:
+                self.update_metadata(tableName, '1')
+                print('Database: Metadata was successfully updated.')
+            except:
+                print('Database: Files to update Metadata.')
+                return False
+
+            try:
+                self.update_put_log(tableName, key, value, timestamp, newHighTimeStamp)
+                print('Database: Update was successfully added to put.log.')
+                return True
+            except:
+                print('Database: Failed to added update to put.log!')
                 return False
         else:
             print('Database: ' + tableName + ' table does not exist!')
