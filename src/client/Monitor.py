@@ -6,13 +6,13 @@ class Monitor:
 
     def __init__(self):
         # This will store latency and high_timestamp information for all nodes
-        # TODO: This should only hold information on some recent data, not all. Please modify as needed
         self.node_dictionary = dict()
 
+        # Parse configuration
         self.config = configparser.ConfigParser()
 
-        # only consider the last window_size latency entries.
-        self.window_size = 10.0
+        # Only consider the last window_size latency entries
+        self.window_size = 10
 
     # This function will be called by the client after a Put call
     def update_latency(self, node_identifier, latency):
