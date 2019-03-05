@@ -9,14 +9,14 @@ class Monitor:
         self.node_dictionary = dict()
 
         # only consider the last window_size latency entries.
-        self.sliding_window_size = 10.0
+        self.window_size = 10.0
 
     # This function will be called by the client after a Put call
     def update_latency(self, node_identifier, latency):
         # If the latency value is already a list, then add to it
         if node_identifier in self.node_dictionary[node_identifier].keys():
             # Only keep the last sliding windows size latencies
-            if len(self.node_dictionary[node_identifier]['latency']) < self.sliding_window_size:
+            if len(self.node_dictionary[node_identifier]['latency']) < self.window_size:
                 self.node_dictionary[node_identifier]['latency'].append(latency)
             else:
                 self.node_dictionary[node_identifier]['latency'].pop(0)
@@ -52,12 +52,16 @@ class Monitor:
 
         # Counts how many are below the desired latency
         counter = 0.0
+        
+        # Global counter to avoid cold start problem
+        total = 0.0
 
         for latency in self.node_dictionary[node_identifier]['latency']:
+            total += 1
             if latency < desired_latency:
                 counter += 1
 
-        return counter / self.window_size
+        return counter / total
 
     def p_node_sla(self, node_identifier, consistency, desired_latency, key):
         # TODO: error handling !!
