@@ -76,7 +76,7 @@ class Monitor:
         else:
             return 0
 
-    # Function to calculate an estimate of the probablity that the node can respond to Gets within the gieven reponse time 
+    # Function to calculate an estimate of the probablity that the node can respond to Gets within the given reponse time 
     def p_node_lat(self, node_identifier, desired_latency):
         # TODO: add check if information on this node is not available
         # Go through the latencies for this node and compute how many are less than desired latency
@@ -102,11 +102,4 @@ class Monitor:
         lat = self.p_node_lat(node_identifier, desired_latency)
 
         return lat * cons
-
-
-
-
-
-
-
 
