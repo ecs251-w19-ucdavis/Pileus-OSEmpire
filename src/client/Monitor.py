@@ -1,4 +1,4 @@
-# Record the set of nodes for each
+# Monitoring storage nodes
 
 
 class Monitor:
@@ -9,13 +9,18 @@ class Monitor:
         self.node_dictionary = dict()
 
         # only consider the last window_size latency entries.
-        self.window_size = 10.0
+        self.sliding_window_size = 10.0
 
-    # This will be called by the client after a Put call
+    # This function will be called by the client after a Put call
     def update_latency(self, node_identifier, latency):
         # If the latency value is already a list, then add to it
         if node_identifier in self.node_dictionary[node_identifier].keys():
-            self.node_dictionary[node_identifier]['latency'].append(latency)
+            # Only keep the last sliding windows size latencies
+            if len(self.node_dictionary[node_identifier]['latency']) < self.sliding_window_size:
+                self.node_dictionary[node_identifier]['latency'].append(latency)
+            else:
+                self.node_dictionary[node_identifier]['latency'].pop(0)
+                self.node_dictionary[node_identifier]['latency'].append(latency)
         else:
             # If this is a new key, add a list under the latency key and add the new latency value to the list
             self.node_dictionary[node_identifier]['latency'] = list()
