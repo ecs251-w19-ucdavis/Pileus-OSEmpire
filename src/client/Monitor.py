@@ -1,6 +1,5 @@
 # Monitoring storage nodes
 
-
 class Monitor:
 
     def __init__(self):
@@ -41,11 +40,23 @@ class Monitor:
         # TODO: find some way to provide a minimum acceptable time_stamp for a given consistency
         minimum_acceptable_timestamp = consistency.timestamp
 
+        # Strong consistency: send directly to the primary
+        if consistency == 'strong': 
+            if node_identifier == config.get('Primary', 'IP'):
+                return 1
+            else:
+                return 0
+
+        # Read-my-writes: maximum timestamp of any previous puts to the key being acessed in the current Get
+        elif consistency == 'read_my_writes': 
+
+
         if node_identifier > minimum_acceptable_timestamp:
             return 1
         else:
             return 0
 
+    # Function to calculate an estimate of the probablity that the node can respond to Gets within the gieven reponse time 
     def p_node_lat(self, node_identifier, desired_latency):
         # TODO: add check if information on this node is not available
         # Go through the latencies for this node and compute how many are less than desired latency
