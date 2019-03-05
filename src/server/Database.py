@@ -25,7 +25,7 @@ class Database:
         if not os.path.exists(self.__metaTable):
             db = {}
             self.dump(self.__metaTable, db)
-            self.update_high_timestamp()
+            self.update_high_timestamp('0.00001')
 
         self.__replicationLogTable = self.__path + 'replication.log'
         if not os.path.exists(self.__replicationLogTable):
@@ -45,6 +45,28 @@ class Database:
         except:
             print('Database: Failed to update replication.log!')
             return False
+
+    def clear_entire_replication_log(self):
+        # To create an empty replication.log file
+        with open(self.__replicationLogTable, "w", newline='') as empty_csv:
+            em_csv = csv.writer(empty_csv, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+            pass
+
+    #Remove replication records that was commited before last ReplicationLogCleaningPeriod
+    def remove_old_replication_records(self, ReplicationLogCleaningPeriod):
+        result, highTimeStamp = self.get_high_timestamp()
+        if not result:
+            return False
+        with open(self.__replicationLogTable, "r") as inp:
+            rows = list(csv.reader(inp))
+            with open(self.__replicationLogTable + '.temp', 'w', newline='') as out:
+                writer = csv.writer(out, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+                for row in rows:
+                    if float(row[5]) >= highTimeStamp - float(ReplicationLogCleaningPeriod):
+                        writer.writerow(row)
+        os.remove(self.__replicationLogTable)
+        os.rename(self.__replicationLogTable + '.temp', self.__replicationLogTable)
+
 
     def update_metadata(self, table, status, version='-1'):
         try:
@@ -370,8 +392,9 @@ if __name__ == "__main__":
     print(a.get_item('shad', '2'))
     print(a.get_item('sha', '3'))
     t, result = a.get_replication_log()
-    for b in t:
-        print(b)
+    # for b in t:
+    #     print(b)
     # print(t)
     # print(t[0][1])
+    a.remove_old_replication_records(20)
     del a

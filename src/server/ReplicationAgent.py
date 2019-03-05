@@ -14,12 +14,14 @@ class ReplicationAgent(rpyc.Service):
         storagePortNumber = int(config.get('GeneralConfiguration', 'ClientServerPort'))
         replicationPortNumber = int(config.get('ReplicationAgent', 'ReplicationPort'))
         syncPeriod = int(config.get('ReplicationAgent', 'SyncPeriod'))
+        replicationLogCleaningPeriod = int(config.get('ReplicationAgent', 'ReplicationLogCleaningPeriod'))
         primaryAddress = config.get('Primary', 'IP')
         secondaryAddresses = config.get('Secondary', 'IPs').split(',')
 
         self.__StoragePortNumber = storagePortNumber
         self.__ReplicationPortNumber = replicationPortNumber
         self.__SyncPeriod = syncPeriod
+        self.__replicationLogCleaningPeriod = replicationLogCleaningPeriod
         self.__isPrimary = primary
         self.__primaryIP = primaryAddress
         self.__secondaryIPes = secondaryAddresses
@@ -27,8 +29,11 @@ class ReplicationAgent(rpyc.Service):
         self.__UpdateMode = "Log-based"
         # self.__UpdateMode = "Table-based"
 
+        if self.__isPrimary:
+            self.periodic_replication_log_cleaning()
         if not self.__isPrimary:
-            self.sync()
+            self.periodic_update()
+
 
     def __del__(self):
         print('Replication Agent: Destructore is called.')
@@ -73,7 +78,7 @@ class ReplicationAgent(rpyc.Service):
             return False
         return True
 
-    def sync(self):
+    def periodic_update(self):
         '''In this version, each secondary check the version of each table and update the
         stale ones periodically'''
         print('Replication Agent: Start updating at ' + str(time.time()) + '.')
@@ -95,10 +100,11 @@ class ReplicationAgent(rpyc.Service):
                         print('Replication Agent: Failed to retrieve its high timestamp!')
                         metadataRetreiveFlag = False
 
-                    if primary_replication_log[0][5] > float(my_high_timestamp):
+                    if float(primary_replication_log[0][5]) > float(my_high_timestamp):
                         #Cannot relaibly do replication-log-based update. So, switch to table-based update
                         print('Replication Agent: replication.log is newer that my last high timestamp! '
                               'Need to switch back to table-based update.')
+                        self.__StorageDatabaseInstance.clear_entire_replication_log()
                         updateMode = "Table-based"
                     else:
                         if metadataRetreiveFlag:
@@ -107,7 +113,7 @@ class ReplicationAgent(rpyc.Service):
                                     continue
                                 try:
                                     if row[0] == 'createTable':
-                                        self.__StorageDatabaseInstance.crate_table(row[1], row[5])
+                                        self.__StorageDatabaseInstance.create_table(row[1], row[5])
                                     elif row[0] == 'deleteTable':
                                         self.__StorageDatabaseInstance.delete_table(row[1], row[5])
                                     elif row[0] == 'put':
@@ -163,5 +169,10 @@ class ReplicationAgent(rpyc.Service):
 
 
 
-        threading.Timer(self.__SyncPeriod, self.sync).start()
+        threading.Timer(self.__SyncPeriod, self.periodic_update).start()
 
+    def periodic_replication_log_cleaning(self):
+        print('Replication Agent: Start clearing old records in replication log.')
+        self.__StorageDatabaseInstance.remove_old_replication_records(self.__replicationLogCleaningPeriod)
+        print('Replication Agent: Clearing old records in replication log was finished.')
+        threading.Timer(self.__replicationLogCleaningPeriod, self.periodic_replication_log_cleaning).start()
