@@ -1,11 +1,15 @@
 # Monitoring storage nodes
 
+import configparser
+
 class Monitor:
 
     def __init__(self):
         # This will store latency and high_timestamp information for all nodes
         # TODO: This should only hold information on some recent data, not all. Please modify as needed
         self.node_dictionary = dict()
+
+        self.config = configparser.ConfigParser()
 
         # only consider the last window_size latency entries.
         self.window_size = 10.0
@@ -42,16 +46,32 @@ class Monitor:
 
         # Strong consistency: send directly to the primary
         if consistency == 'strong': 
-            if node_identifier == config.get('Primary', 'IP'):
+            if node_identifier == self.config.get('Primary', 'IP'):
                 return 1
             else:
                 return 0
 
-        # Read-my-writes: maximum timestamp of any previous puts to the key being acessed in the current Get
-        elif consistency == 'read_my_writes': 
+        # Read-my-writes: the maximum timestamp of any previous puts to the key being acessed in the current Get
+        elif consistency == 'read_my_writes':
+            pass
 
+        # Monotonic: the recorded timestamp for the key being accessed in the Get
+        elif consistency == 'monotonic':
+            pass
+        
+        # Bounded: the current time minus the desired time bound 
+        elif consistency == 'bounded':
+            pass
 
-        if node_identifier > minimum_acceptable_timestamp:
+        # Causual : the maximum timestamp of any object that previously read or written in this session
+        elif consistency == 'causal':
+            pass
+        
+        # Eventual: minimum acceptable timestamp is zero
+        else:
+            minimum_acceptable_timestamp = 0
+
+        if node_high_timestamp > minimum_acceptable_timestamp:
             return 1
         else:
             return 0
