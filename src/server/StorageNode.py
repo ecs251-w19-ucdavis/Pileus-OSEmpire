@@ -43,6 +43,10 @@ class StorageNode(rpyc.Service):
         # (to finalize the service, if needed)
         pass
 
+    def exposed_get_high_timestamp(self):
+        result, highTimeStamp = self.__db.get_high_timestamp()
+        return highTimeStamp, result
+
     def exposed_create_table(self, table):
         return self.__db.create_table(table)
 
@@ -86,6 +90,9 @@ class StorageNode(rpyc.Service):
 
     def exposed_get_metadata(self):
         return self.__db.get_metadata()
+
+    def exposed_get_replication_log(self):
+        return self.__db.get_replication_log()
 
     def exposed_get_table(self, table):
         return self.__db.get_table(table)

@@ -27,23 +27,23 @@ class Database:
             self.dump(self.__metaTable, db)
             self.update_high_timestamp()
 
-        self.__putLogTable = self.__path + 'put.log'
-        if not os.path.exists(self.__putLogTable):
-            # To create an empty put.log file
-            with open(self.__putLogTable, "w", newline='') as empty_csv:
+        self.__replicationLogTable = self.__path + 'replication.log'
+        if not os.path.exists(self.__replicationLogTable):
+            # To create an empty replication.log file
+            with open(self.__replicationLogTable, "w", newline='') as empty_csv:
                 em_csv = csv.writer(empty_csv, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
                 pass
 
-    def update_put_log(self, tableName, key, value, timestamp, high_timestamp):
+    def update_replication_log(self, Operation, tableName, key, value, timestamp, high_timestamp):
         try:
-            row = [tableName, key, value, timestamp, high_timestamp]
-            with open(self.__putLogTable, 'a', newline='') as fd:
+            row = [Operation, tableName, key, value, timestamp, high_timestamp]
+            with open(self.__replicationLogTable, 'a', newline='') as fd:
                 csv_writer = csv.writer(fd, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
                 csv_writer.writerow(row)
-            print('Database: Row was succesfully added to the put.log.')
+            print('Database: Row was succesfully added to the replication.log.')
             return True
         except:
-            print('Database: Failed to update put.log!')
+            print('Database: Failed to update replication.log!')
             return False
 
     def update_metadata(self, table, status, version='-1'):
@@ -69,7 +69,7 @@ class Database:
         try:
             with open(self.__metaTable, 'r') as fd:
                 db = json.load(fd)
-            if newHighTimestamp=='0':
+            if newHighTimestamp == '0':
                 # used when a primary node wants to update the local high timestamp
                 newTime = str(time.time())
             else:
@@ -82,8 +82,7 @@ class Database:
             return True, newTime
         except:
             print('Database: Failed to update high timestamp.')
-            return False, newTime
-        return False, 0
+            return False, 0
 
     def get_high_timestamp(self):
         table = '__high_timestamp'
@@ -110,14 +109,25 @@ class Database:
             return db, False
         return db, True
 
-    def create_table(self, tableName):
+    def get_replication_log(self):
+        replicationLog = []
+        try:
+            with open(self.__replicationLogTable, 'r', newline='') as fd:
+                replicationLog = list(csv.reader(fd))
+            print(replicationLog)
+        except:
+            print('Database: Failed to open Replication.log!')
+            return replicationLog, False
+        return replicationLog, True
+
+    def create_table(self, tableName, highTimestamp='0'):
         table = self.__path + tableName + '.json'
         if os.path.exists(table):
             print('Database: The table already exist!')
             return False
         else:
             try:
-                result = self.update_high_timestamp()
+                result, newHighTimeStamp = self.update_high_timestamp(highTimestamp)
                 if not result:
                     print('Database: Failed to update high timestamp table! Entire update was aborted.')
                     return False
@@ -136,18 +146,25 @@ class Database:
                     self.delete_table(table)
                     print('Database: Failed to create ' + tableName + ' table!')
                     return False
-
                 print('Database: ' + tableName + ' table was successfully created.')
-                return True
             except:
                 print('Database: Failed to create ' + tableName + ' table!')
                 return False
 
-    def delete_table(self, tableName):
+            try:
+                self.update_replication_log( "createTable", tableName, "", "", "", newHighTimeStamp)
+                print('Database: Update was successfully added to replication.log.')
+                return True
+            except:
+                print('Database: Failed to added update to replication.log!')
+                return False
+
+
+    def delete_table(self, tableName, highTimestamp='0'):
         table = self.__path + tableName + '.json'
         if os.path.exists(table):
             try:
-                result = self.update_high_timestamp()
+                result, newHighTimeStamp = self.update_high_timestamp(highTimestamp)
                 if not result:
                     print('Database: Failed to update high timestamp table! Entire update was aborted.')
                     return False
@@ -158,9 +175,16 @@ class Database:
                 os.remove(table)
                 self.update_metadata(tableName, '2')
                 print('Database: ' + tableName + ' table was successfully deleted.')
-                return True
             except:
                 print('Database: Failed to delete ' + tableName + ' table!')
+                return False
+
+            try:
+                self.update_replication_log("deleteTable", tableName, "", "", "", newHighTimeStamp)
+                print('Database: ' + tableName + ' table was successfully deleted.')
+                return True
+            except:
+                print('Database: Failed to added update to replication.log!')
                 return False
         else:
             print('Database: ' + tableName + ' table does not exist!')
@@ -249,11 +273,51 @@ class Database:
                 return False
 
             try:
-                self.update_put_log(tableName, key, value, timestamp, newHighTimeStamp)
-                print('Database: Update was successfully added to put.log.')
+                self.update_replication_log("put", tableName, key, value, timestamp, newHighTimeStamp)
+                print('Database: Update was successfully added to replication.log.')
                 return True
             except:
-                print('Database: Failed to added update to put.log!')
+                print('Database: Failed to added update to replication.log!')
+                return False
+        else:
+            print('Database: ' + tableName + ' table does not exist!')
+            return False
+
+    #It is used by secondary nodes when they receive replication log from primary yo apply updates
+    def set_item_and_high_timestamp(self, tableName, key, value, timestamp, newHighTimeStamp):
+        table = self.__path + tableName + '.json'
+        if os.path.exists(table):
+            try:
+                result, newHighTimeStamp = self.update_high_timestamp(newHighTimeStamp)
+                if not result:
+                    print('Database: Failed to update high timestamp table! Entire update was aborted.')
+                    return False
+            except:
+                print('Database: Failed to update high timestamp table! Entire update was aborted.')
+                return False
+            try:
+                with open(table, 'r') as fd:
+                    db = json.load(fd)
+                db[key] = {'value': value, 'timestamp': timestamp}
+                self.dump(table, db)
+                print('Database: ' + key + ' key was successfully added to ' + tableName + ' table.')
+            except:
+                print('Database: Failed to put data into ' + tableName + ' table!')
+                return False
+
+            try:
+                self.update_metadata(tableName, '1')
+                print('Database: Metadata was successfully updated.')
+            except:
+                print('Database: Files to update Metadata.')
+                return False
+
+            try:
+                self.update_replication_log("put", tableName, key, value, timestamp, newHighTimeStamp)
+                print('Database: Update was successfully added to replication.log.')
+                return True
+            except:
+                print('Database: Failed to added update to replication.log!')
                 return False
         else:
             print('Database: ' + tableName + ' table does not exist!')
@@ -301,7 +365,13 @@ if __name__ == "__main__":
     a.set_item('sha', '1', 'ewsdfd', '12')
     a.set_item('sha', '2', 'asda', '3.5')
     a.set_item('sdfe','r','ere','r')
+    a.delete_table("te")
     print(a.get_item('sha','2'))
     print(a.get_item('shad', '2'))
     print(a.get_item('sha', '3'))
+    t, result = a.get_replication_log()
+    for b in t:
+        print(b)
+    # print(t)
+    # print(t[0][1])
     del a
