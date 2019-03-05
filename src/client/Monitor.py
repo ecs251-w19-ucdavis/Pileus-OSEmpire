@@ -1,7 +1,7 @@
 # Record the set of nodes for each
 
-class Monitor:
 
+class Monitor:
 
     def __init__(self):
         # This will store latency and high_timestamp information for all nodes
