@@ -51,7 +51,6 @@ class Session:
         else:
             raise ValueError('Somehow we have a consistency that is not in consistency class.')
 
-
     def connect_to_server(self):
         config = configparser.ConfigParser()
         config.read_file(open('../../data/Global.conf'))
@@ -70,10 +69,28 @@ class Session:
 
         return connection.root
 
+    def update_maximum_timestamp(self, timestamp):
+        # This should always be called on successful Puts
+        # This might not be called on all successful Gets
+        if timestamp > self.maximum_timestamp:
+            self.maximum_timestamp = timestamp
+
+    def update_put_history(self, key, timestamp):
+        self.put_history[key] = timestamp
+
+        # Need to update the maximum timestamp
+        self.update_maximum_timestamp(timestamp)
+
+    def update_get_history(self, key, timestamp):
+        self.get_history[key] = timestamp
+
+        # Need to update the maximum timestamp
+        self.update_maximum_timestamp(timestamp)
+
     def disconnect(self):
         # Not really sure how this works.
         self.connection = None
-
+        # TODO: this variable should be declared in init
 
 if __name__ == "__main__":
 
