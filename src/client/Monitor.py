@@ -43,7 +43,7 @@ class Monitor:
         node_high_timestamp = self.node_dictionary[node_identifier]['high_timestamp']
 
         # TODO: find some way to provide a minimum acceptable time_stamp for a given consistency
-        minimum_acceptable_timestamp = consistency.timestamp
+        minimum_acceptable_timestamp = consistency.get_minimum_acceptable_timestamp()
 
         # Strong consistency: send directly to the primary
         if consistency == Consistency.STRONG:
@@ -52,27 +52,7 @@ class Monitor:
             else:
                 return 0
 
-        # Read-my-writes: the maximum timestamp of any previous puts to the key being acessed in the current Get
-        elif consistency == 'read_my_writes':
-            pass
-
-        # Monotonic: the recorded timestamp for the key being accessed in the Get
-        elif consistency == 'monotonic':
-            pass
-        
-        # Bounded: the current time minus the desired time bound 
-        elif consistency == 'bounded':
-            pass
-
-        # Causual : the maximum timestamp of any object that previously read or written in this session
-        elif consistency == 'causal':
-            pass
-        
-        # Eventual: minimum acceptable timestamp is zero
-        else:
-            minimum_acceptable_timestamp = 0
-
-        if node_high_timestamp > minimum_acceptable_timestamp:
+        if node_high_timestamp >= minimum_acceptable_timestamp:
             return 1
         else:
             return 0
