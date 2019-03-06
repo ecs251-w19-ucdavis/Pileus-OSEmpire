@@ -9,6 +9,18 @@ Shahbaz:
 
 Greg:
 
+* Added new class Consistency, which holds type, minimum_acceptable_consistency,
+ and time_bound for each type of consistency used in the system.
+ * Added two list variables to Session class to keep track of Put and Get 
+ requests.
+ * Added variable to Session to keep track of the largest known timestamp
+ * Added functions to Session to keep update the three new variables 
+ mentioned above
+ * Modified SLA class to use new Consistency class and removed Consistency 
+ string names from SLA class
+ * Updated Put, Get methods in Client class to pass values to the session 
+ object.
+
 Nader:
 
 **Doing this week:**
