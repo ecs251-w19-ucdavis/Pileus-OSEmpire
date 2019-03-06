@@ -66,7 +66,6 @@ class Client:
 
         return target_sla, best_nodes
 
-
     def put(self, session, key, value):
         # TODO: need to handle errors
         # TODO: This should only go to the main storage node, not the secondaries
@@ -81,9 +80,16 @@ class Client:
         # compute the time elapsed between making the call and getting a return value
         elapsed = end-start
 
-        # pass latency information to monitor
+        # If the put finished correctly
         if result_status:
+            # pass latency information to monitor
             self.monitor.update_latency(session.ip_address, elapsed)
+
+            # Update the session history information with the key and the timestamp
+            session.update_put_history(key, start)
+        else:
+            pass
+            # TODO: need some way to handle the put class not working
 
     def get(self, session, key, sla=None):
         # Need to maintain a timestamp of storage nodes.
@@ -97,17 +103,26 @@ class Client:
         end = time.time()
         elapsed = end-start
 
-        # Extract value, timestamp of value, and high-timestamp of the node
-        value = node_return['value']
-        timestamp = node_return['timestamp']
-        high_timestamp = node_return['high_timestamp']
+        # TODO: pass information to monitor
+        # If the get returned successfully
+        if node_return:
+            # Extract value, timestamp of value, and high-timestamp of the node
+            value = node_return['value']
+            timestamp = node_return['timestamp']
+            high_timestamp = node_return['high_timestamp']
+
+            # Pass the information to the monitor
+            self.monitor.update_latency_and_hightimestamp(session.ip_address, elapsed, high_timestamp)
+
+            # Update the session history information with the key and timestamp
+            session.update_get_history(key, timestamp)
+        else:
+            # TODO: properly handle the case when Get fails
+            pass
+
 
         # TODO: return a condition code that indicates how well the SLA was met, including the consistency of the data
         cc = None
-
-        # TODO: pass information to monitor
-
-        self.monitor.update_latency_and_hightimestamp(session.ip_address, elapsed, high_timestamp)
 
         return value, None
 
