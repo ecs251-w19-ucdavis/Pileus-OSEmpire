@@ -30,3 +30,24 @@ class Consistency:
     def get_minimum_acceptable_timestamp(self):
         if self.minimum_acceptable_timestamp is None:
             raise ValueError('The minimum acceptable timestamp has not been set')
+        else:
+            return self.minimum_acceptable_timestamp
+
+
+if __name__ == "__main__":
+    strong = Consistency(Consistency.STRONG)
+    eventual = Consistency(Consistency.EVENTUAL)
+    read_my_writes = Consistency(Consistency.READ_MY_WRITES)
+    monotonic = Consistency(Consistency.MONOTONIC)
+    bounded = Consistency(Consistency.BOUNDED, time_bound_seconds=10)
+    causal = Consistency(Consistency.CAUSAL)
+
+    consistency_list = [strong, eventual, read_my_writes, monotonic, bounded, causal]
+
+    for con in consistency_list:
+        print(con.type_str)
+        print(con.time_bound)
+        con.set_minimum_acceptable_timestamp(100)
+        print(con.get_minimum_acceptable_timestamp())
+
+    wrong = Consistency('dslkfhiosdj')
