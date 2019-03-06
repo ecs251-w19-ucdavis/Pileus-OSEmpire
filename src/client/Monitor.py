@@ -1,6 +1,7 @@
 # Monitoring storage nodes
 
 import configparser
+from ..client.Consistency import Consistency
 
 class Monitor:
 
@@ -45,7 +46,7 @@ class Monitor:
         minimum_acceptable_timestamp = consistency.timestamp
 
         # Strong consistency: send directly to the primary
-        if consistency == 'strong': 
+        if consistency == Consistency.STRONG:
             if node_identifier == self.config.get('Primary', 'IP'):
                 return 1
             else:
