@@ -60,20 +60,26 @@ class Session:
         else:
             raise ValueError('Somehow we have a consistency that is not in consistency class.')
 
-    def connect_to_server(self):
+    def connect_to_server(self, address=None):
+        # Get the config file
         config = configparser.ConfigParser()
         config.read_file(open('../../data/Global.conf'))
 
-        # Get the ip address and the port number
-        ip = config.get('Primary', 'IP')
-
-        self.ip_address = ip
-
+        # Get the port
         port = int(config.get('GeneralConfiguration', 'ClientServerPort'))
 
-        # Get the connection object
-        connection = rpyc.connect(ip, port=port)
+        # If no address was provided, then use the default
+        if address is None:
+            # Get the ip address and the port number
+            address = config.get('Primary', 'IP')
 
+        # Update the address variable
+        self.ip_address = address
+
+        # Get the connection object
+        connection = rpyc.connect(self.ip_address, port=port)
+
+        # Update the storage node variable, which will be used to make the calls
         self.storage_node = connection.root
 
         return connection.root
