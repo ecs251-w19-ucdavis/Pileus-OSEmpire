@@ -56,7 +56,7 @@ class Monitor:
             past_time = now - self.timeout
 
             if past_time > high_ts:
-                Client.get(key, sla=None)
+                pass
 
     def p_node_cons(self, node_identifier, consistency, key):
 
