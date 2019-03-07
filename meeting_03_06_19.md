@@ -23,6 +23,9 @@ Greg:
 
 Nader:
 
+* Finishing the implementation of monitoring functionalities.
+* Configuring AWS instances for evaluation (may switch to Digital Ocean)
+
 **Doing this week:**
 
 Shahbaz:
@@ -32,6 +35,10 @@ Shahbaz:
 Greg:
 
 Nader:
+
+* Build a small benchmark for evaluation (similar to YCSB).
+* Completing setting up the evaluation plateform.
+* Extracting and plotting results.
 
 **Issues/Problems:**
 
