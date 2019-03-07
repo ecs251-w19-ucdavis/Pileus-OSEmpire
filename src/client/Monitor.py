@@ -1,6 +1,7 @@
 # Monitoring storage nodes
 
 import configparser
+import time
 from ..client.Consistency import Consistency
 
 class Monitor:
@@ -14,6 +15,9 @@ class Monitor:
 
         # Only consider the last window_size latency entries
         self.window_size = 10
+
+        # Timeout for sending active probes 10 ms
+        self.timeout = 10 
 
     # This function will be called by the client after a Put call
     def update_latency(self, node_identifier, latency):
@@ -37,6 +41,10 @@ class Monitor:
         self.node_dictionary[node_identifier]['high_timestamp'] = high_timestamp
 
         self.update_latency(node_identifier, latency)
+
+    # Send active probes
+    def send_active_probe(self, node_list):
+        now = time.time()
 
     def p_node_cons(self, node_identifier, consistency, key):
 

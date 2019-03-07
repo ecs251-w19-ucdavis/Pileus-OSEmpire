@@ -39,6 +39,7 @@ class Client:
         self.primary_node_ip = self.config.get('Primary', 'IP')
         self.secondary_nodes_ip_list = self.config.get('Secondary', 'IPs')
 
+    # Algorithm that selects target subSLA
     def select_target(self, sla_list, node_list, key):
         # This will be updated to keep track of which sla provides the highest utility
         max_util = -1
