@@ -4,6 +4,7 @@ import configparser
 import time
 from ..client.Consistency import Consistency
 from Pileus_OSEmpire.src.client.Client import Client
+from Pileus_OSEmpire.src.client.Consistency import Consistency
 
 class Monitor:
 
