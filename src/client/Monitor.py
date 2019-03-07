@@ -2,6 +2,7 @@
 
 import configparser
 import time
+import rpyc
 from ..client.Consistency import Consistency
 from Pileus_OSEmpire.src.client.Client import Client
 from Pileus_OSEmpire.src.client.Consistency import Consistency
@@ -14,6 +15,10 @@ class Monitor:
 
         # Parse configuration
         self.config = configparser.ConfigParser()
+
+        self.config.read_file(open('../../data/Global.conf'))
+        
+        self.portNumber = int(config.get('GeneralConfiguration', 'ClientServerPort'))
 
         # Only consider the last window_size latency entries
         self.window_size = 10
@@ -47,7 +52,7 @@ class Monitor:
         self.node_dictionary[node_identifier]['last_accessed'] = time.time()
 
     # Send active probes
-    def send_active_probe(self):
+    def send_active_probe(self, portNumber):
         now = time.time()
 
         # For each node, send active probes if idle for timeout
@@ -57,8 +62,22 @@ class Monitor:
 
             past_time = now - self.timeout
 
-            if past_time > self.node_dictionary[node_identifier]['last_accessed']:
-                pass
+            if past_time > self.node_dictionary[node_identifier]['last_accessed']: 
+
+                start = time.time()
+
+                s = rpyc.connect(node_identifier, port=portNumber)
+                c = s.root
+                c.get_probe()
+
+                end = time.time()
+
+                elapsed = end-start
+
+                self.update_latency(node_identifier, elapsed)
+
+                self.node_dictionary[node_identifier]['last_accessed'] = time.time()
+
 
     def p_node_cons(self, node_identifier, consistency, key):
 
