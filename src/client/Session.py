@@ -1,14 +1,23 @@
 import configparser
 import rpyc
-from ..client.Consistency import Consistency
+from Pileus_OSEmpire.src.client.Consistency import Consistency
+from Pileus_OSEmpire.src.client.SLA import SLA
 import time
+
 
 class Session:
 
     def __init__(self, table_name, sla):
+        # The name of the table that we will operate on
         self.table_name = table_name
+
+        # a list of type SLA
         self.sla = sla
-        self.server = None
+
+        # A connection to a StorageNode through rpyc
+        self.storage_node = None
+
+        # The ip address of the StorageNode that this session is connected to
         self.ip_address = None
 
         # Keeps track of and updates latest timestamp of each key, which was involved in a put call
@@ -16,7 +25,6 @@ class Session:
 
         # Keeps track of and updates latest timestamp of each key, which was involved in a get call
         self.get_history = dict()
-        # TODO: add the ip address of the server connected to
 
         # Stores the periodically updated timestamp of the key with the highest timestamp, both in puts and gets
         self.maximum_timestamp = 0
@@ -58,14 +66,14 @@ class Session:
         # Get the ip address and the port number
         ip = config.get('Primary', 'IP')
 
-        self.id_address = ip
+        self.ip_address = ip
 
         port = int(config.get('GeneralConfiguration', 'ClientServerPort'))
 
         # Get the connection object
         connection = rpyc.connect(ip, port=port)
 
-        self.server = connection.root
+        self.storage_node = connection.root
 
         return connection.root
 
@@ -89,14 +97,28 @@ class Session:
 
     def disconnect(self):
         # Not really sure how this works.
-        self.connection = None
-        # TODO: this variable should be declared in init
+        self.storage_node = None
+
 
 if __name__ == "__main__":
 
-    session = Session('bob', list())
+    sla1 = SLA(Consistency('strong'), 200, 0.001)
+    sla2 = SLA(Consistency('read_my_writes'), 20, 0.0001)
+    sla3 = SLA(Consistency('monotonic'), 100, 0.0002)
+    sla4 = SLA(Consistency('bounded', time_bound_seconds=10), 5, 0.0004)
+    sla5 = SLA(Consistency('causal'), 20, 0.00003)
+    sla6 = SLA(Consistency('eventual'), 10, 0.0000001)
+
+    sla_list = [sla1, sla2, sla3, sla4, sla5, sla6]
+
+    session = Session('table1', sla_list)
 
     session.connect_to_server()
 
-    #server.get('1')
-    #server.put(...)
+    for i in range(10):
+        session.update_get_history('key' + str(i), 10 + i)
+        session.update_put_history('key' + str(i), 10 + i)
+
+    print(session.put_history)
+    print(session.get_history)
+    print(session.maximum_timestamp)
