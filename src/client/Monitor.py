@@ -44,6 +44,8 @@ class Monitor:
 
         self.update_latency(node_identifier, latency)
 
+        self.node_dictionary[node_identifier]['last_accessed'] = time.time()
+
     # Send active probes
     def send_active_probe(self):
         now = time.time()
@@ -55,7 +57,7 @@ class Monitor:
 
             past_time = now - self.timeout
 
-            if past_time > high_ts:
+            if past_time > self.node_dictionary[node_identifier]['last_accessed']:
                 pass
 
     def p_node_cons(self, node_identifier, consistency, key):
