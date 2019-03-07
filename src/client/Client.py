@@ -1,23 +1,37 @@
-from ..client.Session import Session
-from ..client.SLA import SLA
-from ..client.Monitor import Monitor
+from Pileus_OSEmpire.src.client.Session import Session
+from Pileus_OSEmpire.src.client.SLA import SLA
+from Pileus_OSEmpire.src.client.Monitor import Monitor
 import time
 import configparser
 
 class Client:
 
     def __init__(self, monitor, config_file_path):
+        # An instance of Monitor class, which is updated and queried
         self.monitor = monitor
+
+        # Path to the config file, which provides ip addresses and port numbers
         self.config_file_path = config_file_path
+
+        # An instance of configparser, used to parse the config file
         self.config = configparser.ConfigParser()
+
+        # Read and store the values in the config file
         with open(config_file_path, 'r') as read_file:
             self.config.read_file(read_file)
-        self.secondary_nodes_ip_list = None
-        self.primary_node_ip = None
+
+        # Stores the ip addresses of all secondary nodes available
+        self.secondary_nodes_ip_list = self.config.get('Secondary', 'IPs')
+
+        # Stores the ip address of the primary node
+        self.primary_node_ip = self.config.get('Primary', 'IP')
+
+        # Used for all requests to Storage Nodes
+        self.session = Session(None, None)
 
     def set_nodes_ip_list(self):
-        # Get the ip address and the port number
-        self.primary = self.config.get('Primary', 'IP')
+        # In case some address changes, set it with this function
+        self.primary_node_ip = self.config.get('Primary', 'IP')
         self.secondary_nodes_ip_list = self.config.get('Secondary', 'IPs')
 
     def select_target(self, sla_list, node_list, key):
@@ -66,7 +80,7 @@ class Client:
 
         return target_sla, best_nodes
 
-    def put(self, session, key, value):
+    def put(self, key, value):
         # TODO: need to handle errors
         # TODO: This should only go to the main storage node, not the secondaries
         # TODO: provide a timestamp to the put method
@@ -91,7 +105,7 @@ class Client:
             pass
             # TODO: need some way to handle the put class not working
 
-    def get(self, session, key, sla=None):
+    def get(self, key, sla=None):
         # Need to maintain a timestamp of storage nodes.
         # Timestamps are used to determine if a node can meet the consistency requirements
         # Need to return the value
@@ -126,55 +140,85 @@ class Client:
 
         return value, None
 
-    @staticmethod
-    def create_table(name):
-        # TODO: need to deal with possible errors
-        server = Session.connect_to_server()
+    def create_table(self, table_name):
+        # check if we have a valid session object
+        if self.session is None:
+            self.session = Session(table_name, None)
+            self.session.connect_to_server()
 
-        server.create_table(name)
+        # Check if the session is connected
+        if self.session.storage_node is None:
+            self.session.connect_to_server()
 
-    @staticmethod
-    def delete_table(name):
-        # TODO: need to deal with possible errors
-        server = Session.connect_to_server()
+        # Try to create a table
+        self.session.storage_node.exposed_create_table(table_name)
 
-        server.delete_table(name)
+    def delete_table(self, table_name):
 
-    @staticmethod
-    def open_table(name):
-        # Return some table object
-        # TODO: need to deal with possible errors here
-        server = Session.connect_to_server()
+        # check if we have a valid session object
+        if self.session is None:
+            self.session = Session(table_name, None)
+            self.session.connect_to_server()
 
-        return server.open_table(name)
+        # Check if the session is connected
+        if self.session.storage_node is None:
+            self.session.connect_to_server()
 
-    @staticmethod
-    def begin_session(table_name, sla):
-        # Returns some session object
-        return Session(table_name, sla)
+        # Try to delete the table
+        self.session.storage_node.delete_table(table_name)
 
-    @staticmethod
-    def end_session(session_object):
-        # ends the connection to the table and flushes data
-        # TODO: error handling
-        session_object.disconnect()
+    def open_table(self, table_name):
+
+        # check if we have a valid session object
+        if self.session is None:
+            self.session = Session(table_name, None)
+            self.session.connect_to_server()
+
+        # Check if the session is connected
+        if self.session.storage_node is None:
+            self.session.connect_to_server()
+
+        # Try to return the table object
+        return self.session.storage_node.get_table(table_name)
+
+    def begin_session(self, table_name, sla):
+        # Change the session variable to a new object with the given table name and sla
+        self.session = Session(table_name, sla)
+
+        # Connect to the server
+        self.session.connect_to_server()
+
+    def end_session(self):
+        if self.session is None:
+            raise ValueError('Session has already ended.')
+        self.session = None
 
 
 # Implementing session logic
 # Needed for read-my-writes, monotonic
 
 if __name__ == "__main__":
-    Client.create_table('table1')
-    Client.create_table('table2')
-    Client.delete_table('table2')
-    table = Client.open_table('table1')
-    sla = []
-    session = Client.begin_session(table, sla)
 
-    key = 'key1'
-    value = 1
+    config_file_path = '/home/greghovhannisyan/PycharmProjects/Pileus-OSEmpire/data/Global.conf'
 
-    Client.put(session, key, value)
-    value, cc = Client.get(session, key)
+    monitor = Monitor()
 
-    Client.end_session(session)
+    client = Client(monitor, config_file_path)
+
+    client.create_table('table1')
+    client.create_table('table2')
+    client.delete_table('table2')
+    table = client.open_table('table1')
+
+
+
+    # sla = []
+    # session = Client.begin_session(table, sla)
+    #
+    # key = 'key1'
+    # value = 1
+    #
+    # Client.put(session, key, value)
+    # value, cc = Client.get(session, key)
+    #
+    # Client.end_session(session)
