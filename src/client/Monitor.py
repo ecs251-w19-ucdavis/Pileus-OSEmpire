@@ -18,7 +18,7 @@ class Monitor:
     # This function will be called by the client after a Put call
     def update_latency(self, node_identifier, latency):
         # If the latency value is already a list, then add to it
-        if node_identifier in self.node_dictionary[node_identifier].keys():
+        if node_identifier in self.node_dictionary.keys():
             # Only keep the last sliding windows size latencies
             if len(self.node_dictionary[node_identifier]['latency']) < self.window_size:
                 self.node_dictionary[node_identifier]['latency'].append(latency)
@@ -27,6 +27,7 @@ class Monitor:
                 self.node_dictionary[node_identifier]['latency'].append(latency)
         else:
             # If this is a new key, add a list under the latency key and add the new latency value to the list
+            self.node_dictionary[node_identifier] = dict()
             self.node_dictionary[node_identifier]['latency'] = list()
             self.node_dictionary[node_identifier]['latency'].append(latency)
 

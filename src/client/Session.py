@@ -9,6 +9,7 @@ class Session:
 
     def __init__(self, table_name, sla):
         # The name of the table that we will operate on
+        # This is a string for now.
         self.table_name = table_name
 
         # a list of type SLA

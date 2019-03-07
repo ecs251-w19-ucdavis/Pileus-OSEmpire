@@ -1,6 +1,7 @@
 from Pileus_OSEmpire.src.client.Session import Session
 from Pileus_OSEmpire.src.client.SLA import SLA
 from Pileus_OSEmpire.src.client.Monitor import Monitor
+from Pileus_OSEmpire.src.client.Consistency import Consistency
 import time
 import configparser
 
@@ -81,14 +82,14 @@ class Client:
         return target_sla, best_nodes
 
     def put(self, key, value):
-        # TODO: need to handle errors
-        # TODO: This should only go to the main storage node, not the secondaries
-        # TODO: provide a timestamp to the put method
 
         # Get the timestamp
         start = time.time()
+
         # Make the put call to the server, with [table_name, key, value, timestamp]
-        result_status = session.server.put(session.table_name, key, value, start)
+        result_status = self.session.storage_node.put(self.session.table_name, key, value, start)
+
+        # Get the end time, for comparison
         end = time.time()
 
         # compute the time elapsed between making the call and getting a return value
@@ -97,20 +98,19 @@ class Client:
         # If the put finished correctly
         if result_status:
             # pass latency information to monitor
-            self.monitor.update_latency(session.ip_address, elapsed)
+            self.monitor.update_latency(self.session.ip_address, elapsed)
 
             # Update the session history information with the key and the timestamp
-            session.update_put_history(key, start)
+            self.session.update_put_history(key, start)
         else:
-            pass
-            # TODO: need some way to handle the put class not working
+            raise ValueError('Failed to put data on Storage Node.')
 
     def get(self, key, sla=None):
         # Need to maintain a timestamp of storage nodes.
         # Timestamps are used to determine if a node can meet the consistency requirements
         # Need to return the value
         if sla is None:
-            sla = session.sla
+            sla = self.session.sla
 
         start = time.time()
         node_return = session.server.get(session.table_name, key)
@@ -205,10 +205,31 @@ if __name__ == "__main__":
 
     client = Client(monitor, config_file_path)
 
-    client.create_table('table1')
-    client.create_table('table2')
-    client.delete_table('table2')
-    table = client.open_table('table1')
+    #client.create_table('table1')
+    #client.create_table('table2')
+    #client.delete_table('table2')
+    #table = client.open_table('table1')
+
+    #print(table)
+
+    sla1 = SLA(Consistency('strong'), 200, 0.001)
+    sla2 = SLA(Consistency('read_my_writes'), 20, 0.0001)
+    sla3 = SLA(Consistency('monotonic'), 100, 0.0002)
+    sla4 = SLA(Consistency('bounded', time_bound_seconds=10), 5, 0.0004)
+    sla5 = SLA(Consistency('causal'), 20, 0.00003)
+    sla6 = SLA(Consistency('eventual'), 10, 0.0000001)
+
+    sla_list = [sla1, sla2, sla3, sla4, sla5, sla6]
+
+    # Assume that begin session is called before any put and get operations
+    client.begin_session('table1', sla_list)
+
+    client.put('key1', 1)
+    client.put('key2', 5)
+    client.put('key1', 15)
+
+    client.end_session()
+
 
 
 
