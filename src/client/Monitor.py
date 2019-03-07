@@ -3,6 +3,7 @@
 import configparser
 import time
 from ..client.Consistency import Consistency
+from Pileus_OSEmpire.src.client.Client import Client
 
 class Monitor:
 
@@ -16,8 +17,8 @@ class Monitor:
         # Only consider the last window_size latency entries
         self.window_size = 10
 
-        # Timeout for sending active probes 10 ms
-        self.timeout = 10 
+        # Timeout for sending active probes 100 ms
+        self.timeout = 100 
 
     # This function will be called by the client after a Put call
     def update_latency(self, node_identifier, latency):
@@ -43,8 +44,18 @@ class Monitor:
         self.update_latency(node_identifier, latency)
 
     # Send active probes
-    def send_active_probe(self, node_list):
+    def send_active_probe(self):
         now = time.time()
+
+        # For each node, send active probes if idle for timeout
+        for node_identifier in self.node_dictionary.keys():
+
+            high_ts = self.node_dictionary[node_identifier]['high_timestamp']
+
+            past_time = now - self.timeout
+
+            if past_time > high_ts:
+                Client.get(key, sla=None)
 
     def p_node_cons(self, node_identifier, consistency, key):
 
