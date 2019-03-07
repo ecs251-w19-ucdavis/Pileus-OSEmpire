@@ -27,6 +27,10 @@ class Client:
         # Stores the ip address of the primary node
         self.primary_node_ip = self.config.get('Primary', 'IP')
 
+        # Store the ip addresses of all the nodes
+        self.all_node_ip_list = self.secondary_nodes_ip_list.copy()
+        self.all_node_ip_list.append(self.primary_node_ip)
+
         # Used for all requests to Storage Nodes
         self.session = Session(None, None)
 
@@ -105,16 +109,69 @@ class Client:
         else:
             raise ValueError('Failed to put data on Storage Node.')
 
+    def was_latency_met(self, latency, sla_list):
+        # Keep track of the ones that met latency
+        latency_met_list = list()
+
+        # Got through all of the SLAs provided and return all whose latency was higher than the given latency
+        for sla in sla_list:
+            if sla.get_latency() > latency:
+                latency_met_list.append(sla)
+
+        return latency_met_list
+
+    def was_consistency_met(self, latency_met_list, node_high_timestamp):
+        # Keep track of the ones that met the consistency
+        consistency_met_list = list()
+
+        # Go through all of the SLAs provided and return all whose consistency was lower then the given consistency
+        for sla in latency_met_list:
+            if sla.get_consistency().get_minimum_acceptable_timestamp() < node_high_timestamp:
+                consistency_met_list.append(sla)
+
+        return consistency_met_list
+
+    def was_latency_and_consistency_met(self, latency, node_high_timestamp, sla_list):
+        # Get the list of SLAs that met the latency
+        latency_met_list = self.was_consistency_met(latency, sla_list)
+
+        # Get the list of SLAs that also met the consistency
+        consistency_met_list = self.was_consistency_met(latency_met_list, node_high_timestamp)
+
+        return consistency_met_list
+
     def get(self, key, sla=None):
         # Need to maintain a timestamp of storage nodes.
         # Timestamps are used to determine if a node can meet the consistency requirements
         # Need to return the value
+
+        # There should be a network call either to a single node or to a small set of nodes.
+
+        # If an sla was not provided, use the sla of the session object
         if sla is None:
             sla = self.session.sla
 
+        # Use data from the monitor to figure out the best node.
+        # If there are multiple best nodes, choose the closest one.
+        # For now, just pick the first out of best_nodes
+        target_sla, best_nodes = self.select_target(sla, self.all_node_ip_list, key)
+
+        # Choose the first node out of best nodes
+        node_address = best_nodes[0]
+
+        # Connect to the chose node
+        self.session.connect_to_server(node_address)
+
+        # Measure the start time for latency calculation
         start = time.time()
-        node_return = session.server.get(session.table_name, key)
+
+        # Make a get request to the connected storage node
+        node_return = self.session.storage_node.get(self.session.table_name, key)
+
+        # Calculate the end time
         end = time.time()
+
+        # Calculate the elapsed time
         elapsed = end-start
 
         # TODO: pass information to monitor
@@ -126,19 +183,17 @@ class Client:
             high_timestamp = node_return['high_timestamp']
 
             # Pass the information to the monitor
-            self.monitor.update_latency_and_hightimestamp(session.ip_address, elapsed, high_timestamp)
+            self.monitor.update_latency_and_hightimestamp(self.session.ip_address, elapsed, high_timestamp)
 
             # Update the session history information with the key and timestamp
-            session.update_get_history(key, timestamp)
+            self.session.update_get_history(key, timestamp)
+
+            # Use the round trip latency, along with the timestamps in the reply to determine which SLAs were met
+            slas_met = self.was_latency_and_consistency_met(elapsed, high_timestamp, sla_list)
+
+            return value, slas_met
         else:
-            # TODO: properly handle the case when Get fails
-            pass
-
-
-        # TODO: return a condition code that indicates how well the SLA was met, including the consistency of the data
-        cc = None
-
-        return value, None
+            raise ValueError('Failed to make a Get request to server')
 
     def create_table(self, table_name):
         # check if we have a valid session object
