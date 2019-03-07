@@ -196,7 +196,7 @@ class Database:
             try:
                 os.remove(table)
                 self.update_metadata(tableName, '2')
-                print('Database: ' + tableName + ' table was successfully deleted.')
+                print('Database: Metadata was successfully updated.')
             except:
                 print('Database: Failed to delete ' + tableName + ' table!')
                 return False
