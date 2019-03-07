@@ -16,10 +16,6 @@ class Monitor:
         # Parse configuration
         self.config = configparser.ConfigParser()
 
-        self.config.read_file(open('../../data/Global.conf'))
-        
-        self.portNumber = int(config.get('GeneralConfiguration', 'ClientServerPort'))
-
         # Only consider the last window_size latency entries
         self.window_size = 10
 
@@ -126,3 +122,10 @@ class Monitor:
 
         return lat * cons
 
+if __name__ == "__main__":
+
+    self.config.read_file(open('../../data/Global.conf'))
+        
+    self.portNumber = int(self.config.get('GeneralConfiguration', 'ClientServerPort'))
+
+    send_active_probe(self, portNumber)
