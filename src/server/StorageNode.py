@@ -112,7 +112,6 @@ class StorageNode(rpyc.Service):
             print("Storage Node: Database failed to update the received update!")
         return result
 
-
 if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read_file(open('../../data/Global.conf'))
