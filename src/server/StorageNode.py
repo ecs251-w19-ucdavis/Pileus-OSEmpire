@@ -48,15 +48,17 @@ class StorageNode(rpyc.Service):
         return highTimeStamp, result
 
     def exposed_create_table(self, table):
-        return self.__db.create_table(table)
+        isSuccesful, resultString = self.__db.create_table(table)
+        return isSuccesful, resultString
 
     def exposed_delete_table(self, table):
         if self.__isPrimary:
-            result = self.__db.delete_table(table)
-            return result
+            result, resultString = self.__db.delete_table(table)
+            return result, resultString
         else:
+            resultString = 'StorageNode: Non-primary node cannot delete any table!'
             print('StorageNode: Non-primary node cannot delete any table!')
-            return False
+            return False, resultString
 
     def exposed_open_table(self, table):
         return self.__db.open_table(table)
@@ -68,25 +70,27 @@ class StorageNode(rpyc.Service):
     def exposed_put(self, table, key, value, timestamp):
         '''put is callable from client'''
         if self.__isPrimary:
-            result = self.__db.set_item(table, key, value, timestamp)
-            return result
+            result, resultString = self.__db.set_item(table, key, value, timestamp)
+            return result, resultString
         else:
+            resultString = 'StorageNode: Non-primary node cannot put into table!'
             print('StorageNode: Non-primary node cannot put into table!')
-            return False
+            return False, resultString
 
     def exposed_get(self, table, key):
         '''get is callable from client'''
-        result = self.__db.get_item(table, key)
+        result, resultString = self.__db.get_item(table, key)
         if not result:
             print('StorageNode: Failed to get data from Database!')
-            return False
+            return 0, False, resultString
         result2, highTimestamp = self.__db.get_high_timestamp()
         if not result2:
+            resultString = 'StorageNode: Failed to get high timestamp from Database!'
             print('StorageNode: Failed to get high timestamp from Database!')
-            return False
+            return 0, False, resultString
         result['high_timestamp'] = highTimestamp
         print(result)
-        return result
+        return result, True, resultString
 
     def exposed_get_metadata(self):
         return self.__db.get_metadata()

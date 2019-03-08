@@ -177,44 +177,54 @@ class Database:
         return replicationLog, True
 
     def create_table(self, tableName, highTimestamp='0'):
+        resultString = ''
         table = self.__path + tableName + '.json'
         if os.path.exists(table):
+            resultString = 'Database: The table already exist!'
             print('Database: The table already exist!')
-            return False
+            return False, resultString
         else:
             with self.__lock:
                 try:
                     result, newHighTimeStamp = self.update_high_timestamp(highTimestamp)
                     if not result:
+                        resultString = 'Database: Failed to update high timestamp table! Entire update was aborted.'
                         print('Database: Failed to update high timestamp table! Entire update was aborted.')
-                        return False
+                        return False, resultString
                 except:
+                    resultString = 'Database: Failed to update high timestamp table! Entire update was aborted.'
                     print('Database: Failed to update high timestamp table! Entire update was aborted.')
-                    return False
+                    return False, resultString
                 try:
                     db = {}
                     result = self.dump(table, db)
                     if not result:
+                        resultString = 'Database: Failed to create ' + tableName + ' table!'
                         print('Database: Failed to create ' + tableName + ' table!')
-                        return False
+                        return False, resultString
                     result = self.update_metadata(tableName, '0')
                     if not result:
                         #If it cannot update metadata, it will undo the table creation
                         self.delete_table(table)
+                        resultString = 'Database: Failed to create ' + tableName + ' table!'
                         print('Database: Failed to create ' + tableName + ' table!')
-                        return False
+                        return False, resultString
+                    resultString = 'Database: ' + tableName + ' table was successfully created.'
                     print('Database: ' + tableName + ' table was successfully created.')
                 except:
+                    resultString = 'Database: Failed to create ' + tableName + ' table!'
                     print('Database: Failed to create ' + tableName + ' table!')
-                    return False
+                    return False, resultString
 
                 try:
                     self.update_replication_log( "createTable", tableName, "", "", "", newHighTimeStamp)
+                    resultString = 'Database: Update was successfully added to replication.log.'
                     print('Database: Update was successfully added to replication.log.')
-                    return True
+                    return True, resultString
                 except:
+                    resultString = 'Database: Failed to added update to replication.log!'
                     print('Database: Failed to added update to replication.log!')
-                    return False
+                    return False, resultString
 
 
     def delete_table(self, tableName, highTimestamp='0'):
@@ -224,29 +234,35 @@ class Database:
                 try:
                     result, newHighTimeStamp = self.update_high_timestamp(highTimestamp)
                     if not result:
+                        resultString = 'Database: Failed to update high timestamp table! Entire update was aborted.'
                         print('Database: Failed to update high timestamp table! Entire update was aborted.')
-                        return False
+                        return False, resultString
                 except:
+                    resultString = 'Database: Failed to update high timestamp table! Entire update was aborted.'
                     print('Database: Failed to update high timestamp table! Entire update was aborted.')
-                    return False
+                    return False, resultString
                 try:
                     os.remove(table)
                     self.update_metadata(tableName, '2')
                     print('Database: Metadata was successfully updated.')
                 except:
+                    resultString = 'Database: Failed to delete ' + tableName + ' table!'
                     print('Database: Failed to delete ' + tableName + ' table!')
-                    return False
+                    return False, resultString
 
                 try:
                     self.update_replication_log("deleteTable", tableName, "", "", "", newHighTimeStamp)
+                    resultString = 'Database: ' + tableName + ' table was successfully deleted.'
                     print('Database: ' + tableName + ' table was successfully deleted.')
-                    return True
+                    return True, resultString
                 except:
+                    resultString = 'Database: Failed to added update to replication.log!'
                     print('Database: Failed to added update to replication.log!')
-                    return False
+                    return False, resultString
             else:
+                resultString = 'Database: ' + tableName + ' table does not exist!'
                 print('Database: ' + tableName + ' table does not exist!')
-                return False
+                return False, resultString
 
     def open_table(self):
         return True
@@ -311,46 +327,54 @@ class Database:
                 try:
                     result, newHighTimeStamp = self.update_high_timestamp()
                     if not result:
+                        resultString = 'Database: Failed to update high timestamp table! Entire update was aborted.'
                         print('Database: Failed to update high timestamp table! Entire update was aborted.')
-                        return False
+                        return False, resultString
                 except:
+                    resultString = 'Database: Failed to update high timestamp table! Entire update was aborted.'
                     print('Database: Failed to update high timestamp table! Entire update was aborted.')
-                    return False
+                    return False, resultString
                 try:
                     self.__table_rwlock.acquire_write()
                     with open(table, 'r') as fd:
                         db = json.load(fd)
                         if key in db:
                             if float(timestamp) <= float(db[key]['timestamp']):
+                                resultString = 'Database: The new timestamp is older than the existing one!'
                                 print('Database: The new timestamp is older than the existing one!')
                                 self.__table_rwlock.release_write()
-                                return False
+                                return False, resultString
                     db[key] = {'value': value, 'timestamp': timestamp}
                     self.dump(table, db)
                     print('Database: ' + key + ' key was successfully added to ' + tableName + ' table.')
                     self.__table_rwlock.release_write()
                 except:
+                    resultString = 'Database: Failed to put data into ' + tableName + ' table!'
                     print('Database: Failed to put data into ' + tableName + ' table!')
                     self.__table_rwlock.release_write()
-                    return False
+                    return False, resultString
 
                 try:
                     self.update_metadata(tableName, '1')
                     print('Database: Metadata was successfully updated.')
                 except:
+                    resultString = 'Database: Files to update Metadata.'
                     print('Database: Files to update Metadata.')
-                    return False
+                    return False, resultString
 
                 try:
                     self.update_replication_log("put", tableName, key, value, timestamp, newHighTimeStamp)
                     print('Database: Update was successfully added to replication.log.')
-                    return True
+                    resultString = 'Database: Uppdate was successful.'
+                    return True, resultString
                 except:
+                    resultString = 'Database: Failed to added update to replication.log!'
                     print('Database: Failed to added update to replication.log!')
-                    return False
+                    return False, resultString
             else:
+                resultString = 'Database: ' + tableName + ' table does not exist!'
                 print('Database: ' + tableName + ' table does not exist!')
-                return False
+                return False, resultString
 
     #It is used by secondary nodes when they receive replication log from primary yo apply updates
     def set_item_and_high_timestamp(self, tableName, key, value, timestamp, newHighTimeStamp):
@@ -406,18 +430,22 @@ class Database:
                     if key in db:
                         value = db[key]
                     else:
+                        resultString = 'Database: ' + key + ' key does not exist in  ' + tableName + ' table!'
                         print('Database: ' + key + ' key does not exist in  ' + tableName + ' table!')
                         self.__table_rwlock.release_read()
-                        return False
+                        return False, resultString
                 self.__table_rwlock.release_read()
-                return value
+                resultString = 'Database: Get was successful.'
+                return value, resultString
             except:
+                resultString = 'Database: Failed to get data from ' + tableName + ' table!'
                 print('Database: Failed to get data from ' + tableName + ' table!')
                 self.__table_rwlock.release_read()
-                return False
+                return False, resultString
         else:
+            resultString = 'Database: ' + tableName + ' table does not exist!'
             print('Database: ' + tableName + ' table does not exist!')
-            return False
+            return False, resultString
 
 
     def dump(self, tableName, database):
