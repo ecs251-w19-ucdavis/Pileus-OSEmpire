@@ -14,7 +14,9 @@ class Monitor:
         self.node_dictionary = dict()
 
         # Parse configuration
+        # Get the config file
         self.config = configparser.ConfigParser()
+        self.config.read_file(open('../../data/Global.conf'))
 
         # Only consider the last window_size latency entries
         self.window_size = 10
@@ -48,8 +50,11 @@ class Monitor:
         self.node_dictionary[node_identifier]['last_accessed'] = time.time()
 
     # Send active probes
-    def send_active_probe(self, portNumber):
+    def send_active_probe(self):
         now = time.time()
+
+        # Get port number
+        port = int(self.config.get('GeneralConfiguration', 'ClientServerPort'))
 
         # For each node, send active probes if idle for timeout
         for node_identifier in self.node_dictionary.keys():
@@ -124,8 +129,4 @@ class Monitor:
 
 if __name__ == "__main__":
 
-    self.config.read_file(open('../../data/Global.conf'))
-        
-    self.portNumber = int(self.config.get('GeneralConfiguration', 'ClientServerPort'))
-
-    send_active_probe(self, portNumber)
+    send_active_probe(self)
