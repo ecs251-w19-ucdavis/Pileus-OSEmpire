@@ -66,7 +66,7 @@ class Monitor:
             start = time.time()
             print(node_identifier)
             print(port_number)
-            high_timetsamp = rpyc.connect(node_identifier, port_number).root().get_probe()
+            high_timetsamp = rpyc.connect(node_identifier, port_number).root.get_probe()
             end = time.time()
 
             # Update the high_timestamp of this node
