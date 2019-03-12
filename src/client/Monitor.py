@@ -2,9 +2,6 @@
 
 import configparser
 import time
-import rpyc
-from ..client.Consistency import Consistency
-from Pileus_OSEmpire.src.client.Client import Client
 from Pileus_OSEmpire.src.client.Consistency import Consistency
 
 class Monitor:
@@ -63,7 +60,7 @@ class Monitor:
 
             past_time = now - self.timeout
 
-            if past_time > self.node_dictionary[node_identifier]['last_accessed']: 
+            if past_time > self.node_dictionary[node_identifier]['last_accessed']:
 
                 start = time.time()
 
@@ -79,13 +76,11 @@ class Monitor:
 
                 self.node_dictionary[node_identifier]['last_accessed'] = time.time()
 
-
     def p_node_cons(self, node_identifier, consistency, key):
 
         # Get the high timestamp of the given key
         node_high_timestamp = self.node_dictionary[node_identifier]['high_timestamp']
 
-        # TODO: find some way to provide a minimum acceptable time_stamp for a given consistency
         minimum_acceptable_timestamp = consistency.get_minimum_acceptable_timestamp()
 
         # Strong consistency: send directly to the primary

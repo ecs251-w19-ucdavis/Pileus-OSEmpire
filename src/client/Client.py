@@ -22,8 +22,8 @@ class Client:
             self.config.read_file(read_file)
 
         # Stores the ip addresses of all secondary nodes available
-        self.secondary_nodes_ip_list = self.config.get('Secondary', 'IPs')
-
+        self.secondary_nodes_ip_list = self.config.get('Secondary', 'IPs').split(',')
+        print(self.secondary_nodes_ip_list)
         # Stores the ip address of the primary node
         self.primary_node_ip = self.config.get('Primary', 'IP')
 
@@ -283,6 +283,11 @@ if __name__ == "__main__":
     client.put('key1', 1)
     client.put('key2', 5)
     client.put('key1', 15)
+
+    print(client.monitor.node_dictionary)
+
+    print(client.get('key1'))
+
 
     client.end_session()
 
