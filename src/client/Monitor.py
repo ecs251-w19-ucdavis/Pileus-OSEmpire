@@ -2,6 +2,7 @@
 
 import configparser
 import time
+import rpyc
 from Pileus_OSEmpire.src.client.Consistency import Consistency
 
 class Monitor:
@@ -14,6 +15,15 @@ class Monitor:
         # Get the config file
         self.config = configparser.ConfigParser()
         self.config.read_file(open('../../data/Global.conf'))
+
+        # Stores the ip addresses of all secondary nodes available
+        self.secondary_nodes_ip_list = self.config.get('Secondary', 'IPs').split(',')
+        # Stores the ip address of the primary node
+        self.primary_node_ip = self.config.get('Primary', 'IP')
+
+        # Store the ip addresses of all the nodes
+        self.all_node_ip_list = self.secondary_nodes_ip_list.copy()
+        self.all_node_ip_list.append(self.primary_node_ip)
 
         # Only consider the last window_size latency entries
         self.window_size = 10
@@ -37,26 +47,42 @@ class Monitor:
             self.node_dictionary[node_identifier]['latency'] = list()
             self.node_dictionary[node_identifier]['latency'].append(latency)
 
+    def update_high_timestamp(self, node_identifier, high_timestamp):
+        self.node_dictionary[node_identifier]['high_timestamp'] = high_timestamp
+
     # This will be called by the client after a Get call
     def update_latency_and_hightimestamp(self, node_identifier, latency, high_timestamp):
 
-        self.node_dictionary[node_identifier]['high_timestamp'] = high_timestamp
-
         self.update_latency(node_identifier, latency)
 
+        self.update_high_timestamp(node_identifier, high_timestamp)
+
         self.node_dictionary[node_identifier]['last_accessed'] = time.time()
+
+    def send_probe(self):
+        port_number = int(self.config.get('GeneralConfiguration', 'ClientServerPort'))
+
+        for node_identifier in self.all_node_ip_list:
+            start = time.time()
+            print(node_identifier)
+            print(port_number)
+            high_timetsamp = rpyc.connect(node_identifier, port_number).root().get_probe()
+            end = time.time()
+
+            # Update the high_timestamp of this node
+            self.update_latency_and_hightimestamp(node_identifier, end-start, high_timetsamp)
 
     # Send active probes
     def send_active_probes(self):
         now = time.time()
 
         # Get port number
-        port = int(self.config.get('GeneralConfiguration', 'ClientServerPort'))
+        port_number = int(self.config.get('GeneralConfiguration', 'ClientServerPort'))
 
         # For each node, send active probes if idle for timeout
         for node_identifier in self.node_dictionary.keys():
 
-            high_ts = self.node_dictionary[node_identifier]['high_timestamp']
+            #high_ts = self.node_dictionary[node_identifier]['high_timestamp']
 
             past_time = now - self.timeout
 
@@ -64,7 +90,7 @@ class Monitor:
 
                 start = time.time()
 
-                s = rpyc.connect(node_identifier, port=portNumber)
+                s = rpyc.connect(node_identifier, port=port_number)
                 c = s.root
                 c.get_probe()
 

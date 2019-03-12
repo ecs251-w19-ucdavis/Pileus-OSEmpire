@@ -92,7 +92,8 @@ class Client:
         start = time.time()
 
         # Make the put call to the server, with [table_name, key, value, timestamp]
-        result_status = self.session.storage_node.put(self.session.table_name, key, value, start)
+        result_status, result_message, high_timestamp = self.session.storage_node.put(
+            self.session.table_name, key, value, start)
 
         # Get the end time, for comparison
         end = time.time()
@@ -102,8 +103,8 @@ class Client:
 
         # If the put finished correctly
         if result_status:
-            # pass latency information to monitor
-            self.monitor.update_latency(self.session.ip_address, elapsed)
+            # Pass the information to the monitor
+            self.monitor.update_latency_and_hightimestamp(self.session.ip_address, elapsed, high_timestamp)
 
             # Update the session history information with the key and the timestamp
             self.session.update_put_history(key, start)
@@ -259,6 +260,8 @@ if __name__ == "__main__":
 
     monitor = Monitor()
 
+    monitor.send_probe()
+
     client = Client(monitor, config_file_path)
 
     #client.create_table('table1')
@@ -288,11 +291,7 @@ if __name__ == "__main__":
 
     print(client.get('key1'))
 
-
     client.end_session()
-
-
-
 
     # sla = []
     # session = Client.begin_session(table, sla)
