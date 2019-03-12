@@ -60,6 +60,10 @@ class Session:
         else:
             raise ValueError('Somehow we have a consistency that is not in consistency class.')
 
+    def update_all_consistencies(self, key):
+        for sla in self.sla:
+            self.update_consistency(sla.consistency, key)
+
     def connect_to_server(self, address=None):
         # Get the config file
         config = configparser.ConfigParser()
@@ -96,11 +100,17 @@ class Session:
         # Need to update the maximum timestamp
         self.update_maximum_timestamp(timestamp)
 
+        # Update consistency minimums
+        self.update_all_consistencies(key)
+
     def update_get_history(self, key, timestamp):
         self.get_history[key] = timestamp
 
         # Need to update the maximum timestamp
         self.update_maximum_timestamp(timestamp)
+
+        # Update consistency minimums
+        self.update_all_consistencies(key)
 
     def disconnect(self):
         # Not really sure how this works.
