@@ -50,7 +50,7 @@ class Monitor:
         self.node_dictionary[node_identifier]['last_accessed'] = time.time()
 
     # Send active probes
-    def send_active_probe(self):
+    def send_active_probes(self):
         now = time.time()
 
         # Get port number
@@ -129,4 +129,5 @@ class Monitor:
 
 if __name__ == "__main__":
 
-    send_active_probe(self)
+    monitor = Monitor()
+    monitor.send_active_probes()
