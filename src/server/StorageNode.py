@@ -65,7 +65,7 @@ class StorageNode(rpyc.Service):
 
     def exposed_get_probe(self):
         result = self.__db.get_high_timestamp()
-        return time.time()
+        return result
 
     def exposed_put(self, table, key, value, timestamp):
         high_timestamp = self.__db.get_high_timestamp()
