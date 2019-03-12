@@ -68,29 +68,31 @@ class StorageNode(rpyc.Service):
         return time.time()
 
     def exposed_put(self, table, key, value, timestamp):
+        high_timestamp = self.__db.get_high_timestamp()
         '''put is callable from client'''
         if self.__isPrimary:
             result, resultString = self.__db.set_item(table, key, value, timestamp)
-            return result, resultString
+            return result, resultString, high_timestamp
         else:
             resultString = 'StorageNode: Non-primary node cannot put into table!'
             print('StorageNode: Non-primary node cannot put into table!')
-            return False, resultString
+            return False, resultString, high_timestamp
 
     def exposed_get(self, table, key):
         '''get is callable from client'''
+        high_timestamp = self.__db.get_high_timestamp()
         result, resultString = self.__db.get_item(table, key)
         if not result:
             print('StorageNode: Failed to get data from Database!')
-            return 0, False, resultString
+            return 0, False, resultString, high_timestamp
         result2, highTimestamp = self.__db.get_high_timestamp()
         if not result2:
             resultString = 'StorageNode: Failed to get high timestamp from Database!'
             print('StorageNode: Failed to get high timestamp from Database!')
-            return 0, False, resultString
+            return 0, False, resultString, high_timestamp
         result['high_timestamp'] = highTimestamp
         print(result)
-        return result, True, resultString
+        return result, True, resultString, high_timestamp
 
     def exposed_get_metadata(self):
         return self.__db.get_metadata()
