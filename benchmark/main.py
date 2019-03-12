@@ -24,7 +24,6 @@ a markdown file to keep a record of.
                                 between each read and write
         -r --random         Activates random mode, where reads are taken
                                 randomly from the DB instead of sequentially
-        -l --list           Outputs a list of available DB modules
         --no-csv            App will not generate a CSV file with the raw data
         --no-report         Option to disable the creation of the report file
         --no-split          Alternate between reads and writes instead of all
@@ -79,10 +78,6 @@ class Benchmark():
 
         self.options = options
 
-        if self.options.get('--list'):
-
-            self.__print_module_list()
-
         self.collection = 'test'
 
         # Retrieve command line self.options
@@ -116,7 +111,67 @@ class Benchmark():
         self.report_date = time.strftime("%b%d-%Y--%H-%M")
 
         if setup:
-            self.setup()
+            self.setup()       
+
+    def setup(self):
+        """ This function runs all of the setup commands for benchmarking. By
+        separating this from __init__(), many of the functions from the
+        Benchmark() class can be used outside of the application for testing.
+        """
+
+        if self.options.get('--debug'):
+
+            self.feaux_run()
+
+        else:
+
+            self.db_name = self.options.get('<database>')
+
+            self.module = self.__register_module(self.db_name)
+            self.database_client = self.module[0].Benchmark(
+                self.collection, setup=True, trials=self.trials
+            )
+
+            module_settings = self.module[1]
+            self.number_of_nodes = module_settings.NUMBER_OF_NODES
+
+            self.db_name = self.db_name.replace('db', '').upper()
+
+            # Run the benchmarks!
+            if self.split:
+
+                self.run_split()
+
+            else:
+
+                self.run()
+
+        if not self.report_title:
+
+            self.report_title = '{db}-{date}'.format(
+                db=self.db_name,
+                date=self.report_date,
+            )
+
+        self.reports_dir = 'generated_reports/{title}'.format(
+            title=self.report_title,
+        )
+
+        # TODO - fix a bug where 2 reports cannot be made in the same minute,
+        # TODO - because the naming convention used here doesn't account for
+        # TODO - seconds anymore
+        makedirs(self.reports_dir)
+
+        self.images_dir = self.reports_dir + '/images'
+        makedirs(self.images_dir)
+
+        self.package_dir = os.path.dirname(os.path.realpath(__file__))
+
+        data = self.compile_data()
+
+        report_data = self.generate_report_data(data)
+
+        self.generate_report(report_data)
 
     def feaux_run(self):
         """ This function generates fake data to be used for testing purposes.
@@ -729,75 +784,6 @@ class Benchmark():
         )
 
         return data_table, data_table_md
-
-    @staticmethod
-    def __print_module_list():
-        """ Static method that prints the list of available modules to the
-        console
-        """
-
-        mod_list = retrieve_module_list()
-
-        message = 'The following modules are available: \n\n'
-
-        for mod in mod_list:
-
-            message += '-{mod}\n'.format(mod=mod)
-
-        exit(message)
-
-    def __register_module(self, db_module):
-        """ This function begins the process of registering a module for
-        benchmarking.  It checks to see if the module exists, and if it does,
-        it will attempt the import.
-
-        :param str db_module: The module to register
-
-        :return tup module: a tuple with the main and local parts of the module
-        """
-
-        module_list = retrieve_module_list()
-
-        if db_module in module_list:
-
-            module = self.__import_db_mod(db_module)
-
-            return module
-
-        else:
-
-            error = 'Invalid DB module!  Please be sure you are using the \n' \
-                    'package name and not just the name of the database ' \
-                    'itself.\n'
-
-            exit(error)
-
-    @staticmethod
-    def __import_db_mod(module):
-        """ This function does the actual import of the database-specific
-        module.
-
-        :param str module: The module to be imported
-
-        :return tup module: a tuple with the main and local parts of the module
-        """
-
-        try:
-
-            main = importlib.import_module(module + '.main')
-            local = importlib.import_module(module + '.local')
-
-            module = (main, local)
-
-            return module
-
-        except ImportError:
-
-            error = 'Error!  Package could not be imported!  Please make \n' \
-                    'sure you are using the package name and not the name \n' \
-                    'of the database itself.'
-
-            exit(error)
 
 if __name__ == '__main__':
 
