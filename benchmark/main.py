@@ -62,25 +62,6 @@ from clint.textui import progress
 import six
 
 
-def retrieve_module_list():
-    """ This function will retrieve a list of all available modules in the
-    project directory and then return said list.
-
-    :return list mod_list: The list of modules in the project directory
-    """
-
-    current_dir = getcwd()
-    mod_list = []
-
-    for item in listdir(current_dir):
-
-        if item.endswith('db'):
-
-            mod_list.append(item)
-
-    return mod_list
-
-
 class Benchmark():
     """ The primary benchmark class of the application, which manages the whole
     process from start to finish.  After collecting user options, the
@@ -137,66 +118,6 @@ class Benchmark():
         if setup:
             self.setup()
 
-    def setup(self):
-        """ This function runs all of the setup commands for benchmarking. By
-        separating this from __init__(), many of the functions from the
-        Benchmark() class can be used outside of the application for testing.
-        """
-
-        if self.options.get('--debug'):
-
-            self.feaux_run()
-
-        else:
-
-            self.db_name = self.options.get('<database>')
-
-            self.module = self.__register_module(self.db_name)
-            self.database_client = self.module[0].Benchmark(
-                self.collection, setup=True, trials=self.trials
-            )
-
-            module_settings = self.module[1]
-            self.number_of_nodes = module_settings.NUMBER_OF_NODES
-
-            self.db_name = self.db_name.replace('db', '').upper()
-
-            # Run the benchmarks!
-            if self.split:
-
-                self.run_split()
-
-            else:
-
-                self.run()
-
-        if not self.report_title:
-
-            self.report_title = '{db}-{date}'.format(
-                db=self.db_name,
-                date=self.report_date,
-            )
-
-        self.reports_dir = 'generated_reports/{title}'.format(
-            title=self.report_title,
-        )
-
-        # TODO - fix a bug where 2 reports cannot be made in the same minute,
-        # TODO - because the naming convention used here doesn't account for
-        # TODO - seconds anymore
-        makedirs(self.reports_dir)
-
-        self.images_dir = self.reports_dir + '/images'
-        makedirs(self.images_dir)
-
-        self.package_dir = os.path.dirname(os.path.realpath(__file__))
-
-        data = self.compile_data()
-
-        report_data = self.generate_report_data(data)
-
-        self.generate_report(report_data)
-
     def feaux_run(self):
         """ This function generates fake data to be used for testing purposes.
         The distribution is random so that analysis can still be performed and
@@ -227,8 +148,8 @@ class Benchmark():
         entry = dict()
 
         entry_fields = {
-            'Number': string.digits,
-            'Info': string.ascii_letters,
+            'Key': string.digits,
+            'Value': string.ascii_letters,
         }
 
         for field, selection in entry_fields.items():
@@ -243,7 +164,7 @@ class Benchmark():
 
         return entry
 
-    def run(self):
+    def run(self, sla):
         """ This function keeps track of and calls the read/ write functions
         for benchmarking.  For each iteration, a new DB entry will be created,
         written to the DB, and then read back from it.
@@ -257,7 +178,7 @@ class Benchmark():
         for index in progress.bar(list(range(self.trials))):
 
             entry = self.random_entry()
-            entry.update(Index=index)
+            # entry.update(Index=index)
 
             self.write(entry)
 
@@ -267,9 +188,9 @@ class Benchmark():
             if self.options.get('-s'):
                 time.sleep(1/20)
 
-            self.read(index)
+            self.read(entry, sla)
 
-    def run_split(self):
+    def run_split(self, sla):
         """ This function performs the same actions as 'run()', with the key
         exception that this splits reads and writes into two separate runs,
         instead of alternating reads and writes.
@@ -280,7 +201,7 @@ class Benchmark():
         for index in progress.bar(list(range(self.trials))):
 
             entry = self.random_entry()
-            entry.update(Index=index)
+            # entry.update(Index=index)
 
             self.write(entry)
 
@@ -294,7 +215,7 @@ class Benchmark():
             if self.random:
                 index = random.randint(0, index)
 
-            self.read(index)
+            self.read(entry, sla)
 
             if self.options.get('-s'):
                 time.sleep(1/20)
@@ -307,9 +228,12 @@ class Benchmark():
         :param dict entry: The entry to be recorded to the DB
         """
 
+        key = entry['Key']
+        value = entry['Value']
+
         write_start_time = time.time()
 
-        self.database_client.write(entry)
+        self.client.put(key, value)
 
         write_stop_time = time.time()
 
@@ -323,7 +247,7 @@ class Benchmark():
 
             print(write_msg)
 
-    def read(self, index):
+    def read(self, entry, sla=None):
         """ This function handles all DB read commands, and times that action.
         It takes a single parameter, which is the index of an entry
         to retrieve from the DB.
@@ -331,9 +255,11 @@ class Benchmark():
         :param int index: The index of the item to be retrieved from the DB
         """
 
+        key = entry['Key']
+
         read_start_time = time.time()
 
-        read_entry = self.database_client.read(index)
+        read_entry = self.client.get(key, sla)
 
         read_stop_time = time.time()
 
