@@ -1,7 +1,7 @@
-from Pileus_OSEmpire.src.client.Session import Session
-from Pileus_OSEmpire.src.client.SLA import SLA
-from Pileus_OSEmpire.src.client.Monitor import Monitor
-from Pileus_OSEmpire.src.client.Consistency import Consistency
+from Session import Session
+from SLA import SLA
+from Monitor import Monitor
+from Consistency import Consistency
 import time
 import configparser
 
@@ -76,11 +76,11 @@ class Client:
                 elif util == max_util:
                     best_nodes.append(node)
 
-        # Now go through all of the best nodes and choose by latency
-        for node in best_nodes:
-            if node.latency < best_latency:
-                best_nodes = node
-                best_latency = node.latency
+        # # Now go through all of the best nodes and choose by latency
+        # for node in best_nodes:
+        #     if node.latency < best_latency:
+        #         best_nodes = node
+        #         best_latency = node.latency
 
         # TODO: add some corner case handling, if all of the best nodes have the same latency
 
@@ -127,6 +127,7 @@ class Client:
         consistency_met_list = list()
 
         # Go through all of the SLAs provided and return all whose consistency was lower then the given consistency
+        print('latency: ' + str(latency_met_list))
         for sla in latency_met_list:
             if sla.get_consistency().get_minimum_acceptable_timestamp() < node_high_timestamp:
                 consistency_met_list.append(sla)
@@ -135,7 +136,7 @@ class Client:
 
     def was_latency_and_consistency_met(self, latency, node_high_timestamp, sla_list):
         # Get the list of SLAs that met the latency
-        latency_met_list = self.was_consistency_met(latency, sla_list)
+        latency_met_list = self.was_latency_met(latency, sla_list)
 
         # Get the list of SLAs that also met the consistency
         consistency_met_list = self.was_consistency_met(latency_met_list, node_high_timestamp)
@@ -168,8 +169,7 @@ class Client:
         start = time.time()
 
         # Make a get request to the connected storage node
-        node_return = self.session.storage_node.get(self.session.table_name, key)
-
+        node_return, status, result_str, high_timestamp = self.session.storage_node.get(self.session.table_name, key)
         # Calculate the end time
         end = time.time()
 
@@ -178,7 +178,7 @@ class Client:
 
         # TODO: pass information to monitor
         # If the get returned successfully
-        if node_return:
+        if status:
             # Extract value, timestamp of value, and high-timestamp of the node
             value = node_return['value']
             timestamp = node_return['timestamp']
@@ -191,7 +191,7 @@ class Client:
             self.session.update_get_history(key, timestamp)
 
             # Use the round trip latency, along with the timestamps in the reply to determine which SLAs were met
-            slas_met = self.was_latency_and_consistency_met(elapsed, high_timestamp, sla_list)
+            slas_met = self.was_latency_and_consistency_met(elapsed, high_timestamp, sla)
 
             return value, slas_met
         else:
@@ -256,7 +256,7 @@ class Client:
 
 if __name__ == "__main__":
 
-    config_file_path = '/home/greghovhannisyan/PycharmProjects/Pileus-OSEmpire/data/Global.conf'
+    config_file_path = '../../data/Global.conf'
 
     monitor = Monitor()
 
@@ -264,10 +264,10 @@ if __name__ == "__main__":
 
     client = Client(monitor, config_file_path)
 
-    #client.create_table('table1')
-    #client.create_table('table2')
-    #client.delete_table('table2')
-    #table = client.open_table('table1')
+    client.create_table('table1')
+    client.create_table('table2')
+    # client.delete_table('table2')
+    table = client.open_table('table1')
 
     #print(table)
 
@@ -289,7 +289,13 @@ if __name__ == "__main__":
 
     print(client.monitor.node_dictionary)
 
-    print(client.get('key1'))
+    print('----------')
+    value, met = client.get('key1')
+    print('value: ' + str(value))
+    for m in met:
+        print(m.consistency.type_str, ' ', m.latency, ' ', m.utility)
+
+    print('----------')
 
     client.end_session()
 

@@ -1,9 +1,8 @@
 import configparser
 import rpyc
-from Pileus_OSEmpire.src.client.Consistency import Consistency
-from Pileus_OSEmpire.src.client.SLA import SLA
+from Consistency import Consistency
+import SLA
 import time
-
 
 class Session:
 
@@ -34,7 +33,7 @@ class Session:
         # For now, we will have a special case for strong. The monitor will always return true for the primary node
         # TODO: look into a way to send requests for non-primary nodes, though this is outside of paper scope
         if consistency.type_str == Consistency.STRONG:
-            consistency.set_minimum_acceptable_timestamp(None)
+            consistency.set_minimum_acceptable_timestamp(10000)
 
         # Maximum timestamp of any previous Puts to the key being accessed
         elif consistency.type_str == Consistency.READ_MY_WRITES:
@@ -42,11 +41,14 @@ class Session:
 
         # Latest timestamp of previous Gets for given key
         elif consistency.type_str == Consistency.MONOTONIC:
-            consistency.set_minimum_acceptable_timestamp(self.get_history[key])
+            if key in self.get_history.keys():
+                consistency.set_minimum_acceptable_timestamp(self.get_history[key])
+            else:
+                consistency.set_minimum_acceptable_timestamp(0)
 
         # current time minus the desired bound time
         elif consistency.type_str == Consistency.BOUNDED:
-            consistency.set_minimum_acceptable_timestamp(time.time() - consistency.time_bound_seconds)
+            consistency.set_minimum_acceptable_timestamp(time.time() - consistency.time_bound)
 
         # Maximum timestamp of any object that was read or written in this session
         elif consistency.type_str == Consistency.CAUSAL:
@@ -59,6 +61,10 @@ class Session:
         # This should never happen
         else:
             raise ValueError('Somehow we have a consistency that is not in consistency class.')
+
+    def update_all_consistencies(self, key):
+        for sla in self.sla:
+            self.update_consistency(sla.consistency, key)
 
     def connect_to_server(self, address=None):
         # Get the config file
@@ -96,11 +102,17 @@ class Session:
         # Need to update the maximum timestamp
         self.update_maximum_timestamp(timestamp)
 
+        # Update consistency minimums
+        self.update_all_consistencies(key)
+
     def update_get_history(self, key, timestamp):
         self.get_history[key] = timestamp
 
         # Need to update the maximum timestamp
         self.update_maximum_timestamp(timestamp)
+
+        # Update consistency minimums
+        self.update_all_consistencies(key)
 
     def disconnect(self):
         # Not really sure how this works.

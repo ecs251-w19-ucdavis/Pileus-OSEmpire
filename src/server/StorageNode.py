@@ -5,8 +5,8 @@ import rpyc
 from rpyc.utils.server import ThreadedServer
 from threading import Thread
 
-from src.server import Database
-from src.server import ReplicationAgent
+import Database
+import ReplicationAgent
 
 
 def terminate_handler():
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     portNumber = int(config.get('GeneralConfiguration', 'ClientServerPort'))
     replicationPortNumber = int(config.get('ReplicationAgent', 'ReplicationPort'))
 
-    StorageNodeInstance = StorageNode(replicationPortNumber, primary=True)
+    StorageNodeInstance = StorageNode(replicationPortNumber, primary=False)
 
     signal.signal(signal.SIGINT, terminate_handler)
     t = ThreadedServer(StorageNodeInstance, port=portNumber)

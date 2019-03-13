@@ -29,7 +29,7 @@ class Consistency:
 
     def get_minimum_acceptable_timestamp(self):
         if self.minimum_acceptable_timestamp is None:
-            raise ValueError('The minimum acceptable timestamp has not been set')
+            raise ValueError('The minimum acceptable timestamp has not been set: ' + self.type_str)
         else:
             return self.minimum_acceptable_timestamp
 

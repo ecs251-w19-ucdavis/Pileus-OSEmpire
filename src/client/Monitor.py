@@ -3,7 +3,7 @@
 import configparser
 import time
 import rpyc
-from Pileus_OSEmpire.src.client.Consistency import Consistency
+from Consistency import Consistency
 
 class Monitor:
 
@@ -66,7 +66,7 @@ class Monitor:
             start = time.time()
             print(node_identifier)
             print(port_number)
-            high_timetsamp = rpyc.connect(node_identifier, port_number).root().get_probe()
+            high_timetsamp = rpyc.connect(node_identifier, port_number).root.get_probe()
             end = time.time()
 
             # Update the high_timestamp of this node
@@ -105,8 +105,10 @@ class Monitor:
     def p_node_cons(self, node_identifier, consistency, key):
 
         # Get the high timestamp of the given key
-        node_high_timestamp = self.node_dictionary[node_identifier]['high_timestamp']
-
+        node_high_timestamp = self.node_dictionary[node_identifier]['high_timestamp'][1]
+        #print('--------')
+        #print(node_high_timestamp)
+        #print('--------')
         minimum_acceptable_timestamp = consistency.get_minimum_acceptable_timestamp()
 
         # Strong consistency: send directly to the primary

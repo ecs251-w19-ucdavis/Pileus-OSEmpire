@@ -3,7 +3,7 @@ import configparser
 import os
 import time
 import csv
-from src.server import ReadWriteLock
+import ReadWriteLock
 import threading
 from threading import Thread
 

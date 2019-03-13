@@ -1,4 +1,4 @@
-from Pileus_OSEmpire.src.client.Consistency import Consistency
+import Consistency
 
 class SLA:
 # Remember, the sla that is used by other classes will actually be a collection of SLAs

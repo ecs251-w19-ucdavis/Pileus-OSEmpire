@@ -92,7 +92,7 @@ class ReplicationAgent(rpyc.Service):
                     storageConnection = connection.root
                     primary_replication_log, result1 = storageConnection.get_replication_log()
                     result2, my_high_timestamp = self.__StorageDatabaseInstance.get_high_timestamp()
-                    # print(primary_replication_log, result1)
+                    print(primary_replication_log, result1)
                     if not result1:
                         print('Replication Agent: Failed to get replication log from Primary Storage Node!')
                         metadataRetreiveFlag = False
@@ -141,6 +141,10 @@ class ReplicationAgent(rpyc.Service):
 
                     if metadataRetreiveFlag:
                         for key in primary_metadata:
+                            print(key)
+                            if primary_metadata[key]['status'] == '2':
+                                self.__StorageDatabaseInstance.delete_table(key)
+                                continue
                             tableData = storageConnection.get_table(key)
                             if key in my_metadata:
                                 #We will update the high timestamp last to make sure it is consistent in worst case
@@ -159,16 +163,14 @@ class ReplicationAgent(rpyc.Service):
                                     print('Replication Agent: ' + key + ' table is successfully updated.')
                         #To update the high timestamp
                         key = '__high_timestamp'
-                        result = self.__StorageDatabaseInstance.update_high_timestamp(primary_metadata[key]['version'])
+                        result, dump = self.__StorageDatabaseInstance.update_high_timestamp(primary_metadata[key]['version'])
                         if result:
                             print('Replication Agent: ' + key + ' table is successfully updated.')
                         else:
                             print('Replication Agent: ' + key + ' table does not need update.')
                 except:
                     print('Replication Agent: Failed to get data from Primary Storage Node!')
-
-
-
+        print("33333")
         threading.Timer(self.__SyncPeriod, self.periodic_update).start()
 
     def periodic_replication_log_cleaning(self):
