@@ -4,6 +4,7 @@ import configparser
 import time
 import rpyc
 from Consistency import Consistency
+import pdb
 
 class Monitor:
 
@@ -29,7 +30,7 @@ class Monitor:
         self.window_size = 10
 
         # Timeout for sending active probes 100 ms
-        self.timeout = 100 
+        self.timeout = 100
 
     # This function will be called by the client after a Put call
     def update_latency(self, node_identifier, latency):
@@ -103,9 +104,11 @@ class Monitor:
                 self.node_dictionary[node_identifier]['last_accessed'] = time.time()
 
     def p_node_cons(self, node_identifier, consistency, key):
-
+        print('AAAAAAAAAAAAAAAA')
+        print(self.node_dictionary)
+        print(node_identifier)
         # Get the high timestamp of the given key
-        node_high_timestamp = self.node_dictionary[node_identifier]['high_timestamp'][1]
+        node_high_timestamp = self.node_dictionary[node_identifier]['high_timestamp']
         #print('--------')
         #print(node_high_timestamp)
         #print('--------')
@@ -118,7 +121,10 @@ class Monitor:
             else:
                 return 0
 
-        if node_high_timestamp >= minimum_acceptable_timestamp:
+        # pdb.set_trace()
+        print(node_high_timestamp[1])
+        print('------BBB-----')
+        if node_high_timestamp[1] >= minimum_acceptable_timestamp:
             return 1
         else:
             return 0
