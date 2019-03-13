@@ -92,8 +92,10 @@ class Client:
         start = time.time()
 
         # Make the put call to the server, with [table_name, key, value, timestamp]
-        result_status, result_message, high_timestamp = self.session.storage_node.put(
+        result_status, result_message, ht_info = self.session.storage_node.put(
             self.session.table_name, key, value, start)
+
+        ht_status, high_timestamp = ht_info
 
         # Get the end time, for comparison
         end = time.time()
@@ -182,7 +184,7 @@ class Client:
             # Extract value, timestamp of value, and high-timestamp of the node
             value = node_return['value']
             timestamp = node_return['timestamp']
-            high_timestamp = node_return['high_timestamp']
+            ht_status, high_timestamp = node_return['high_timestamp']
 
             # Pass the information to the monitor
             self.monitor.update_latency_and_hightimestamp(self.session.ip_address, elapsed, high_timestamp)
