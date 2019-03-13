@@ -106,6 +106,7 @@ class Client:
         # If the put finished correctly
         if result_status:
             # Pass the information to the monitor
+            # print('put', self.session.ip_address, high_timestamp)
             self.monitor.update_latency_and_hightimestamp(self.session.ip_address, elapsed, high_timestamp)
 
             # Update the session history information with the key and the timestamp
@@ -129,9 +130,10 @@ class Client:
         consistency_met_list = list()
 
         # Go through all of the SLAs provided and return all whose consistency was lower then the given consistency
-        print('latency: ' + str(latency_met_list))
+        #print('latency: ' + str(latency_met_list))
         for sla in latency_met_list:
-            if sla.get_consistency().get_minimum_acceptable_timestamp() < node_high_timestamp:
+            #Shahbaz: I had to convert them to float
+            if float(sla.get_consistency().get_minimum_acceptable_timestamp()) < float(node_high_timestamp):
                 consistency_met_list.append(sla)
 
         return consistency_met_list
@@ -174,7 +176,7 @@ class Client:
         node_return, status, result_str, high_timestamp = self.session.storage_node.get(self.session.table_name, key)
         # Calculate the end time
         end = time.time()
-
+        print(node_return, status, result_str, high_timestamp)
         # Calculate the elapsed time
         elapsed = end-start
 
@@ -184,9 +186,13 @@ class Client:
             # Extract value, timestamp of value, and high-timestamp of the node
             value = node_return['value']
             timestamp = node_return['timestamp']
-            ht_status, high_timestamp = node_return['high_timestamp']
+
+            #shahbaz:
+            # ht_status, high_timestamp = node_return['high_timestamp']
+            high_timestamp = node_return['high_timestamp']
 
             # Pass the information to the monitor
+            # print('put', self.session.ip_address, high_timestamp)
             self.monitor.update_latency_and_hightimestamp(self.session.ip_address, elapsed, high_timestamp)
 
             # Update the session history information with the key and timestamp
@@ -273,12 +279,12 @@ if __name__ == "__main__":
 
     #print(table)
 
-    sla1 = SLA(Consistency('strong'), 200, 0.001)
-    sla2 = SLA(Consistency('read_my_writes'), 20, 0.0001)
-    sla3 = SLA(Consistency('monotonic'), 100, 0.0002)
-    sla4 = SLA(Consistency('bounded', time_bound_seconds=10), 5, 0.0004)
-    sla5 = SLA(Consistency('causal'), 20, 0.00003)
-    sla6 = SLA(Consistency('eventual'), 10, 0.0000001)
+    sla1 = SLA(Consistency('strong'), 1, 1)
+    sla2 = SLA(Consistency('read_my_writes'), 0.2, 0.3)
+    sla3 = SLA(Consistency('monotonic'), 0.1, 0.3)
+    sla4 = SLA(Consistency('bounded', time_bound_seconds=10), 0.5, 0.4)
+    sla5 = SLA(Consistency('causal'), 0.4, 0.35)
+    sla6 = SLA(Consistency('eventual'), 0.05, 0.25)
 
     sla_list = [sla1, sla2, sla3, sla4, sla5, sla6]
 
@@ -292,6 +298,13 @@ if __name__ == "__main__":
     print(client.monitor.node_dictionary)
 
     print('----------')
+    value, met = client.get('key1')
+    print('value: ' + str(value))
+    for m in met:
+        print(m.consistency.type_str, ' ', m.latency, ' ', m.utility)
+    print('----------')
+
+
     value, met = client.get('key1')
     print('value: ' + str(value))
     for m in met:

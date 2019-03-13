@@ -93,7 +93,8 @@ class Session:
     def update_maximum_timestamp(self, timestamp):
         # This should always be called on successful Puts
         # This might not be called on all successful Gets
-        if timestamp > self.maximum_timestamp:
+        # Shahbaz: I had to convert them to float
+        if float(timestamp) > self.maximum_timestamp:
             self.maximum_timestamp = timestamp
 
     def update_put_history(self, key, timestamp):

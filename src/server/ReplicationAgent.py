@@ -142,6 +142,9 @@ class ReplicationAgent(rpyc.Service):
                     if metadataRetreiveFlag:
                         for key in primary_metadata:
                             print(key)
+                            if primary_metadata[key]['status'] == '0':
+                                self.__StorageDatabaseInstance.create_table(key)
+                                continue
                             if primary_metadata[key]['status'] == '2':
                                 self.__StorageDatabaseInstance.delete_table(key)
                                 continue

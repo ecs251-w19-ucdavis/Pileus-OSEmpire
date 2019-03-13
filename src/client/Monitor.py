@@ -49,6 +49,7 @@ class Monitor:
             self.node_dictionary[node_identifier]['latency'].append(latency)
 
     def update_high_timestamp(self, node_identifier, high_timestamp):
+        # print('update_high_timestamp: ', node_identifier, high_timestamp)
         self.node_dictionary[node_identifier]['high_timestamp'] = high_timestamp
 
     # This will be called by the client after a Get call
@@ -56,6 +57,7 @@ class Monitor:
 
         self.update_latency(node_identifier, latency)
 
+        # print('update_latency_and_hightimestamp: ', node_identifier, high_timestamp)
         self.update_high_timestamp(node_identifier, high_timestamp)
 
         self.node_dictionary[node_identifier]['last_accessed'] = time.time()
@@ -67,11 +69,13 @@ class Monitor:
             start = time.time()
             print(node_identifier)
             print(port_number)
-            high_timetsamp = rpyc.connect(node_identifier, port_number).root.get_probe()
+            # high_timetsamp = rpyc.connect(node_identifier, port_number).root.get_probe()
+            high_timestamp, ht_status = rpyc.connect(node_identifier, port_number).root.get_probe()
+            print('send_probe: ', high_timestamp)
             end = time.time()
 
             # Update the high_timestamp of this node
-            self.update_latency_and_hightimestamp(node_identifier, end-start, high_timetsamp)
+            self.update_latency_and_hightimestamp(node_identifier, end-start, high_timestamp)
 
     # Send active probes
     def send_active_probes(self):
@@ -104,9 +108,9 @@ class Monitor:
                 self.node_dictionary[node_identifier]['last_accessed'] = time.time()
 
     def p_node_cons(self, node_identifier, consistency, key):
-        print('AAAAAAAAAAAAAAAA')
-        print(self.node_dictionary)
-        print(node_identifier)
+        # print('AAAAAAAAAAAAAAAA')
+        # print(self.node_dictionary)
+        # print(node_identifier)
         # Get the high timestamp of the given key
         node_high_timestamp = self.node_dictionary[node_identifier]['high_timestamp']
         #print('--------')
@@ -122,9 +126,9 @@ class Monitor:
                 return 0
 
         # pdb.set_trace()
-        print(node_high_timestamp[1])
-        print('------BBB-----')
-        if node_high_timestamp[1] >= minimum_acceptable_timestamp:
+        # print(node_high_timestamp)
+        # print('------BBB-----')
+        if float(node_high_timestamp) >= float(minimum_acceptable_timestamp):
             return 1
         else:
             return 0
