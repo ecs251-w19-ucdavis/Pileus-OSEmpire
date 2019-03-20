@@ -67,7 +67,7 @@ To run a server, you need to run the StorageNode.py python file. It will instant
 
 2. Set up a Storage Node as Primary (You can also set any number of Secondary replicas). Update the configuration file with their public IP addresses. 
     
-3. Run the app! Use the "-h" option to see different arguments.
+3. Run the application!
 
     ```
     $ cd /src/client
@@ -87,4 +87,28 @@ To run a server, you need to run the StorageNode.py python file. It will instant
     # Run the application in debug mode, which generates a Normal (Gaussian) data set for 
     # analysis and debugging
     $ python Benchmark.py --debug
+    ```
+
+    * General usage information and options: `$ python main.py -h`:
+    ``` bash
+    Usage:
+        main.py [options]
+
+    Options:
+        -h --help           Show this help screen
+        -v                  Show verbose output from the application
+        -V                  Show REALLY verbose output, including the time
+                                from each run
+        -s                  Sleep mode (experimental) - sleeps for 1/20 (s)
+                                between each read and write
+        -r --random         Activates random mode, where reads are taken
+                                randomly from the DB instead of sequentially
+        --no-csv            App will not generate a CSV file with the raw data
+        --no-report         Option to disable the creation of the report file
+        --no-split          Alternate between reads and writes instead of all
+                                writes before reads
+        --length=<n>        Specify an entry length for reads/writes
+                                [default: 10]
+        --trials=<n>        Specify the number of reads and writes to make to
+                                the DB to collect data on [default: 1000]
     ```

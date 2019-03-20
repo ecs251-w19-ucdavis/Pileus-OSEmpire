@@ -12,8 +12,6 @@ a markdown file to keep a record of.
 
     Usage:
         main.py [options]
-        main.py --list
-        main.py <report_title> [options]
 
     Options:
         -h --help           Show this help screen
