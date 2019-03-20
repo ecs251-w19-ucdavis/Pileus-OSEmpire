@@ -57,6 +57,9 @@ There are Three main classes on the server side:
 # How to run primary/secondary servers
 To run a server, you need to run the StorageNode.py python file. It will instantiate Database and Replication Agent as well. The default parameters are set to make the running server as a Primary node. To make the node as a secondary node, you need to change the isPrimary variable in the StorageNode.py file to false.
 
+# Correctness Experiment
+To check the correctness of the whole system, you can run the Client.py. The main() function in Client.py constructs multiple SLA objects, incorporating all of the six consistency categories provided. Along with the consistency, each SLA also has a latency in seconds and a utility value. All of the SLAs are combined into a list and provided as input to the Client. The Client then makes multiple put requests and some get requests. For each get request, we provide a verbose mode for the Client and the Monitor. By setting debug_mode=True in the object constructor of Client and Monitor, we can receive useful information about the results. This information includes: what was the target node for each get() request, what were the predictions for each node and SLA combination, what were the best nodes or node, which node was each get() request sent to, how long did the actual get() request take, which SLAs were determined to have been met after the get() requst, and more.
+
 # Benchmarking Application
 1. To run, you need to install the following dependencies:
 
