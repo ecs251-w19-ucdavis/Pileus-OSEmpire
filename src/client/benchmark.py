@@ -135,7 +135,9 @@ class Benchmark():
         client.begin_session('table1', sla_list)
 
         if setup:
-            self.setup(client)       
+            self.setup(client)
+
+        client.end_session(session)       
 
     def setup(self, client):
         """ This function runs all of the setup commands for benchmarking. By
