@@ -83,11 +83,11 @@ To check the correctness of the whole system, you can run the Client.py. The mai
     Examples:
     
     ``` bash
-    # Benchmark alternates between 10 reads and writes, with randomly ordered reads, sleep mode activated
+    # Benchmark alternates between 10 reads and writes, with random reads, sleep mode activated
     $ python Benchmark.py -v -s --trials=10 --random --no-split
     
-    # Benchmark with 10 reads and writes, each with two 1000 character fields
-    $ python Benchmark.py -v --trials=100 --length=1000 
+    # Benchmark with 100 reads and writes, each with two 20 character fields
+    $ python Benchmark.py -v --trials=100 --length=20 
     
     ```
 
