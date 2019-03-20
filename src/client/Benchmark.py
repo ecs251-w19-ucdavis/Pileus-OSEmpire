@@ -96,9 +96,9 @@ class Benchmark():
         if not options.get('--trials'):
             options['--trials'] = 1000
         self.trials = int(options.get('--trials'))
-            
-        # Switch to True if you experiments with random node selection method    
-        self.select_random = True
+
+        # Switch to true if you experiment with random node selection
+        self.select_random = False
 
         if self.options.get('--no-split'):
 
@@ -127,7 +127,7 @@ class Benchmark():
         client.create_table('table1')
 
         sla1 = SLA(Consistency('strong'), 0.3, 1)
-        sla2 = SLA(Consistency('read_my_writes'), 0.5, 0.3)
+        sla2 = SLA(Consistency('read_my_writes'), 0.5, 0.45)
         sla3 = SLA(Consistency('monotonic'), 0.1, 0.3)
         sla4 = SLA(Consistency('bounded', time_bound_seconds=10), 0.5, 0.4)
         sla5 = SLA(Consistency('causal'), 0.4, 0.35)
@@ -141,9 +141,9 @@ class Benchmark():
         if setup:
             self.setup(client)
 
-        client.end_session()  
+        client.end_session()
 
-        print('Average Delivered Utility is: ', sum(self.average_utility)/len(self.average_utility))     
+        print('Average Delivered Utility is: ', sum(self.average_utility)/len(self.average_utility))
 
     def setup(self, client):
         """ This function runs all of the setup commands for benchmarking. By
@@ -186,7 +186,7 @@ class Benchmark():
         data = self.compile_data()
 
         report_data = self.generate_report_data(data)
-		
+
         print('****** Done ! ******')
 
         # print(report_data)
@@ -272,7 +272,7 @@ class Benchmark():
             self.read(client, entry)
 
             if self.options.get('-s'):
-                time.sleep(1/20)
+                time.sleep(5)
 
     def write(self, client, entry):
         """ This function handles all DB write commands and times that action.
