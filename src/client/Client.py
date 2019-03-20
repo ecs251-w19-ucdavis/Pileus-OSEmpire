@@ -4,6 +4,7 @@ from Monitor import Monitor
 from Consistency import Consistency
 import time
 import configparser
+import random
 
 class Client:
 
@@ -204,6 +205,58 @@ class Client:
             return value, slas_met
         else:
             raise ValueError('Failed to make a Get request to server')
+
+    def random_get(self, key, sla=None):
+        if sla is None:
+            sla = self.session.sla
+
+        # Use data from the monitor to figure out the best node.
+        # If there are multiple best nodes, choose the closest one.
+        # For now, just pick the first out of best_nodes
+        best_nodes = random.choice(self.all_node_ip_list)
+
+        # Choose the first node out of best nodes
+        node_address = best_nodes
+
+        # Connect to the chose node
+        self.session.connect_to_server(node_address)
+
+        # Measure the start time for latency calculation
+        start = time.time()
+
+        # Make a get request to the connected storage node
+        node_return, status, result_str, high_timestamp = self.session.storage_node.get(self.session.table_name, key)
+        # Calculate the end time
+        end = time.time()
+        print(node_return, status, result_str, high_timestamp)
+        # Calculate the elapsed time
+        elapsed = end-start
+
+        # TODO: pass information to monitor
+        # If the get returned successfully
+        if status:
+            # Extract value, timestamp of value, and high-timestamp of the node
+            value = node_return['value']
+            timestamp = node_return['timestamp']
+
+            #shahbaz:
+            # ht_status, high_timestamp = node_return['high_timestamp']
+            high_timestamp = node_return['high_timestamp']
+
+            # Pass the information to the monitor
+            # print('put', self.session.ip_address, high_timestamp)
+            self.monitor.update_latency_and_hightimestamp(self.session.ip_address, elapsed, high_timestamp)
+
+            # Update the session history information with the key and timestamp
+            self.session.update_get_history(key, timestamp)
+
+            # Use the round trip latency, along with the timestamps in the reply to determine which SLAs were met
+            slas_met = self.was_latency_and_consistency_met(elapsed, high_timestamp, sla)
+
+            return value, slas_met
+        else:
+            raise ValueError('Failed to make a Get request to server')
+
 
     def create_table(self, table_name):
         # check if we have a valid session object

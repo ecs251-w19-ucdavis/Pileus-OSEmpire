@@ -8,6 +8,7 @@ from threading import Thread
 import Database
 import ReplicationAgent
 
+isPrimary = True
 
 def terminate_handler():
     print("The StorageNode is terminated")
@@ -124,7 +125,7 @@ if __name__ == "__main__":
     portNumber = int(config.get('GeneralConfiguration', 'ClientServerPort'))
     replicationPortNumber = int(config.get('ReplicationAgent', 'ReplicationPort'))
 
-    StorageNodeInstance = StorageNode(replicationPortNumber, primary=False)
+    StorageNodeInstance = StorageNode(replicationPortNumber, primary=isPrimary)
 
     signal.signal(signal.SIGINT, terminate_handler)
     t = ThreadedServer(StorageNodeInstance, port=portNumber)
