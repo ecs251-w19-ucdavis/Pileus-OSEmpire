@@ -1,5 +1,5 @@
 """
-DB Benchmarking Application
+Benchmarking Application
 ===========================
 
 Main.py
@@ -11,7 +11,6 @@ a markdown file to keep a record of.
 
     Usage:
         main.py <database> [options]
-        main.py --debug [options]
         main.py --list
         main.py <database> <report_title> [options]
 
@@ -28,8 +27,6 @@ a markdown file to keep a record of.
         --no-report         Option to disable the creation of the report file
         --no-split          Alternate between reads and writes instead of all
                                 writes before reads
-        --debug             Generates a random dataset instead of actually
-                                connecting to a DB
         --length=<n>        Specify an entry length for reads/writes
                                 [default: 10]
         --trials=<n>        Specify the number of reads and writes to make to
@@ -58,8 +55,14 @@ from sys import exit
 from tabulate import tabulate
 from docopt import docopt
 from clint.textui import progress
-import six
 
+from Client import Client
+from Session import Session
+from SLA import SLA
+from Monitor import Monitor
+from Consistency import Consistency
+
+import six
 
 class Benchmark():
     """ The primary benchmark class of the application, which manages the whole
@@ -110,41 +113,48 @@ class Benchmark():
         self.time_and_date = time.strftime("%a, %d %b, %Y at %H:%M:%S")
         self.report_date = time.strftime("%b%d-%Y--%H-%M")
 
-        if setup:
-            self.setup()       
+        # Invoke sla and client
+        config_file_path = '../../data/Global.conf'
 
-    def setup(self):
+        monitor = Monitor()
+        monitor.send_probe()
+
+        client = Client(monitor, config_file_path)
+
+        client.create_table('table1')
+
+        sla1 = SLA(Consistency('strong'), 1, 1)
+        sla2 = SLA(Consistency('read_my_writes'), 0.2, 0.3)
+        sla3 = SLA(Consistency('monotonic'), 0.1, 0.3)
+        sla4 = SLA(Consistency('bounded', time_bound_seconds=10), 0.5, 0.4)
+        sla5 = SLA(Consistency('causal'), 0.4, 0.35)
+        sla6 = SLA(Consistency('eventual'), 0.05, 0.25)
+
+        sla_list = [sla1, sla2, sla3, sla4, sla5, sla6]
+
+        client.begin_session('table1', sla_list)
+
+        if setup:
+            self.setup(client)       
+
+    def setup(self, client):
         """ This function runs all of the setup commands for benchmarking. By
         separating this from __init__(), many of the functions from the
         Benchmark() class can be used outside of the application for testing.
         """
 
-        if self.options.get('--debug'):
+        self.db_name = self.options.get('<database>')
 
-            self.feaux_run()
+        self.db_name = self.db_name.replace('db', '').upper()
+
+        # Run the benchmarks!
+        if self.split:
+
+            self.run_split(client)
 
         else:
 
-            self.db_name = self.options.get('<database>')
-
-            self.module = self.__register_module(self.db_name)
-            self.database_client = self.module[0].Benchmark(
-                self.collection, setup=True, trials=self.trials
-            )
-
-            module_settings = self.module[1]
-            self.number_of_nodes = module_settings.NUMBER_OF_NODES
-
-            self.db_name = self.db_name.replace('db', '').upper()
-
-            # Run the benchmarks!
-            if self.split:
-
-                self.run_split()
-
-            else:
-
-                self.run()
+            self.run(client)
 
         if not self.report_title:
 
@@ -173,25 +183,6 @@ class Benchmark():
 
         self.generate_report(report_data)
 
-    def feaux_run(self):
-        """ This function generates fake data to be used for testing purposes.
-        The distribution is random so that analysis can still be performed and
-        plots can be drawn.
-        """
-
-        self.number_of_nodes = 'n/a'
-        self.db_name = 'feaux_db'
-
-        r = np.random.normal(0.004, 0.001, self.trials)
-        self.read_times = r.tolist()
-
-        w = np.random.normal(0.005, 0.0015, self.trials)
-        self.write_times = w.tolist()
-
-        for i in progress.bar(list(range(self.trials))):
-
-            pass
-
     def random_entry(self):
         """ This function generates a random sdata entry consisting of two
         fields - a string and an integer.  The string is generated from all
@@ -219,7 +210,7 @@ class Benchmark():
 
         return entry
 
-    def run(self, sla):
+    def run(self, client):
         """ This function keeps track of and calls the read/ write functions
         for benchmarking.  For each iteration, a new DB entry will be created,
         written to the DB, and then read back from it.
@@ -235,7 +226,7 @@ class Benchmark():
             entry = self.random_entry()
             # entry.update(Index=index)
 
-            self.write(entry)
+            self.write(client, entry)
 
             if self.random:
                 index = random.randint(0, index)
@@ -243,9 +234,9 @@ class Benchmark():
             if self.options.get('-s'):
                 time.sleep(1/20)
 
-            self.read(entry, sla)
+            self.read(client, entry)
 
-    def run_split(self, sla):
+    def run_split(self, client):
         """ This function performs the same actions as 'run()', with the key
         exception that this splits reads and writes into two separate runs,
         instead of alternating reads and writes.
@@ -258,7 +249,7 @@ class Benchmark():
             entry = self.random_entry()
             # entry.update(Index=index)
 
-            self.write(entry)
+            self.write(client, entry)
 
             if self.options.get('-s'):
                 time.sleep(1/20)
@@ -270,12 +261,12 @@ class Benchmark():
             if self.random:
                 index = random.randint(0, index)
 
-            self.read(entry, sla)
+            self.read(client, entry)
 
             if self.options.get('-s'):
                 time.sleep(1/20)
 
-    def write(self, entry):
+    def write(self, client, entry):
         """ This function handles all DB write commands and times that action.
         It takes a single parameter ('entry'), which is the data to
         be written to the DB.
@@ -288,7 +279,7 @@ class Benchmark():
 
         write_start_time = time.time()
 
-        self.client.put(key, value)
+        client.put(key, value)
 
         write_stop_time = time.time()
 
@@ -302,7 +293,7 @@ class Benchmark():
 
             print(write_msg)
 
-    def read(self, entry, sla=None):
+    def read(self, client, entry):
         """ This function handles all DB read commands, and times that action.
         It takes a single parameter, which is the index of an entry
         to retrieve from the DB.
@@ -314,7 +305,7 @@ class Benchmark():
 
         read_start_time = time.time()
 
-        read_entry = self.client.get(key, sla)
+        read_entry = client.get(key)
 
         read_stop_time = time.time()
 
@@ -436,9 +427,6 @@ class Benchmark():
 
         n_stdev = 3
 
-        if self.options.get('--debug'):
-            stdev = 15
-
         if stdev > 3 * average:
 
             n_stdev = 1
@@ -488,7 +476,6 @@ class Benchmark():
             'database': self.db_name,
             'time_and_date': self.time_and_date,
             'entry_length': self.entry_length,
-            'node_number': self.number_of_nodes,
             'trial_number': self.trials,
             'param_table': param_table,
             'data_table': data_table,
@@ -671,11 +658,9 @@ class Benchmark():
             ['Database Tested', self.db_name],
             ['Number of Trials', str(self.trials)],
             ['Length of Each Entry Field', str(self.entry_length)],
-            ['Number of Nodes in Cluster', str(self.number_of_nodes)],
             ['# of StDev\'s Displayed in Graphs', str(cd.get('n_stdev'))],
             ['Range of Rolling Average in Graphs', str(cd.get('rolling_avg_range'))],
             ['Split Reads and Writes', str(self.split)],
-            ['Debug Mode', str(self.options.get('--debug'))],
             ['Random Mode (Random Reads)', str(self.options.get('--random'))],
         ]
 
