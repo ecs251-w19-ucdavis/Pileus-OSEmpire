@@ -10,7 +10,7 @@ from the trials are printed to the console by default, and are also printed to
 a markdown file to keep a record of.
 
     Usage:
-        main.py <database> [options]
+        main.py [options]
         main.py --list
         main.py <database> <report_title> [options]
 
@@ -42,7 +42,6 @@ import string
 import random
 import importlib
 import pylab
-import ipdb
 import seaborn
 import pandas as pd
 import numpy as np
@@ -80,7 +79,7 @@ class Benchmark():
             options = {}
 
         self.options = options
-
+        print(int(self.options.get('--trials')))
         self.collection = 'test'
 
         # Retrieve command line self.options
@@ -145,9 +144,7 @@ class Benchmark():
         Benchmark() class can be used outside of the application for testing.
         """
 
-        self.db_name = self.options.get('<database>')
-
-        self.db_name = self.db_name.replace('db', '').upper()
+        self.db_name = 'PileusDB'
 
         # Run the benchmarks!
         if self.split:
@@ -182,8 +179,10 @@ class Benchmark():
         data = self.compile_data()
 
         report_data = self.generate_report_data(data)
+		
+        print('****** Done ! ******')
 
-        self.generate_report(report_data)
+        # print(report_data)
 
     def random_entry(self):
         """ This function generates a random sdata entry consisting of two
@@ -392,10 +391,7 @@ class Benchmark():
         if not rolling_range:
             rolling_range = self.trials / 10
 
-        rolling_avg = pd.stats.moments.rolling_mean(
-            dataframe,
-            rolling_range,
-        )
+        rolling_avg = dataframe.rolling(window=int(rolling_range)).mean()
 
         return rolling_avg
 
@@ -489,51 +485,6 @@ class Benchmark():
         }
 
         return report_data
-
-    def generate_report(self, report_data):
-        """ This function will take the compiled data and generated a report
-        from it.  A report file will also be saved in the `generated_reports`
-        directory, unless the `--no_report` option was selected at runtime.
-
-        :param report_data: all of the necessary data to generate the
-                    benchmark report
-        """
-
-        if self.report_title:
-
-            report_name = '{parent_dir}/{title}.md'.format(
-                parent_dir=self.reports_dir,
-                title=self.report_title,
-            )
-
-        else:
-
-            report_name = '{parent_dir}/{db}-{date}.report.md'.format(
-                parent_dir=self.reports_dir,
-                db=self.db_name,
-                date=self.report_date,
-            )
-
-        report_template_path = '{base_dir}/report_template.md'.format(
-            base_dir=self.package_dir
-        )
-        with open(report_template_path, 'r') as infile:
-
-            template = infile.read()
-
-            terminal_report = template.format(**report_data)
-
-            print('\n\n' + terminal_report + '\n\n')
-
-            if not self.no_report:
-
-                template = template.replace('_table', '_table_md')
-
-                report = template.format(**report_data)
-
-                with open(report_name, 'w+') as outfile:
-
-                    outfile.write(report)
 
     def generate_plot(self, dataframe, name, plot_type='line', **kwargs):
         """ This function takes a DataFrame
