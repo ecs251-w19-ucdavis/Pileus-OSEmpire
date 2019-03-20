@@ -83,16 +83,12 @@ To check the correctness of the whole system, you can run the Client.py. The mai
     Examples:
     
     ``` bash
-    # Benchmark 3000 reads and writes separately, with randomly ordered reads
-    $ python Benchmark.py --split --trials=3000
+    # Benchmark alternates between 100 reads and writes, with randomly ordered reads
+    $ python Benchmark.py -v --trials=100 --random --no-split
     
-    # Benchmark with 10000 reads and writes, each with two 1000 character fields, 
-    # and then generate a CSV file of the raw data
-    $ python Benchmark.py --csv --trials=10000 --length=1000
+    # Benchmark with 10 reads and writes, each with two 100 character fields, sleep mode activated
+    $ python Benchmark.py -v -s --trials=10 --length=1000 
     
-    # Run the application in debug mode, which generates a Normal (Gaussian) data set for 
-    # analysis and debugging
-    $ python Benchmark.py --debug
     ```
 
     * General usage information and options: `$ python main.py -h`:
