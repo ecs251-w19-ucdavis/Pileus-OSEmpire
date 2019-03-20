@@ -8,7 +8,7 @@ import pdb
 
 class Monitor:
 
-    def __init__(self):
+    def __init__(self, debug_mode=False):
         # This will store latency and high_timestamp information for all nodes
         self.node_dictionary = dict()
 
@@ -31,6 +31,9 @@ class Monitor:
 
         # Timeout for sending active probes 100 ms
         self.timeout = 100
+
+        # Turn on debug mode if needed
+        self.debug_mode = debug_mode
 
     # This function will be called by the client after a Put call
     def update_latency(self, node_identifier, latency):
@@ -156,7 +159,17 @@ class Monitor:
 
         cons = self.p_node_cons(node_identifier, consistency, key)
 
+        if self.debug_mode:
+            if cons == 1:
+                print(node_identifier + ' can meet the ' + str(consistency.type_str) + ' consistency level.')
+            if cons == 0:
+                print(node_identifier + ' cannot meet the ' + str(consistency.type_str) + ' consistency level.')
+
         lat = self.p_node_lat(node_identifier, desired_latency)
+
+        if self.debug_mode:
+            print('probability of node ' + str(node_identifier) + ' meeting latency of ' + str(desired_latency) +
+                  ' seconds is: ' + str(lat))
 
         return lat * cons
 
