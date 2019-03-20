@@ -78,7 +78,7 @@ class Benchmark():
             options = {}
 
         self.options = options
-        print(int(self.options.get('--trials')))
+        print('Number of Puts and Gets: ', int(self.options.get('--trials')))
         self.collection = 'test'
 
         # Retrieve command line self.options
@@ -96,6 +96,9 @@ class Benchmark():
         if not options.get('--trials'):
             options['--trials'] = 1000
         self.trials = int(options.get('--trials'))
+            
+        # Switch to True if you experiments with random node selection method    
+        self.select_random = True
 
         if self.options.get('--no-split'):
 
@@ -107,6 +110,8 @@ class Benchmark():
 
         self.write_times = []
         self.read_times = []
+
+        self.average_utility = []
 
         self.time_and_date = time.strftime("%a, %d %b, %Y at %H:%M:%S")
         self.report_date = time.strftime("%b%d-%Y--%H-%M")
@@ -121,8 +126,8 @@ class Benchmark():
 
         client.create_table('table1')
 
-        sla1 = SLA(Consistency('strong'), 1, 1)
-        sla2 = SLA(Consistency('read_my_writes'), 0.2, 0.3)
+        sla1 = SLA(Consistency('strong'), 0.3, 1)
+        sla2 = SLA(Consistency('read_my_writes'), 0.5, 0.3)
         sla3 = SLA(Consistency('monotonic'), 0.1, 0.3)
         sla4 = SLA(Consistency('bounded', time_bound_seconds=10), 0.5, 0.4)
         sla5 = SLA(Consistency('causal'), 0.4, 0.35)
@@ -136,7 +141,9 @@ class Benchmark():
         if setup:
             self.setup(client)
 
-        client.end_session()       
+        client.end_session()  
+
+        print('Average Delivered Utility is: ', sum(self.average_utility)/len(self.average_utility))     
 
     def setup(self, client):
         """ This function runs all of the setup commands for benchmarking. By
@@ -306,13 +313,30 @@ class Benchmark():
 
         read_start_time = time.time()
 
-        read_entry = client.get(key)
+        if self.select_random:
+            read_start_time = time.time()
 
-        read_stop_time = time.time()
+            read_entry, slas_met = client.random_get(key)
+
+            read_stop_time = time.time()
+        else:
+            read_start_time = time.time()
+
+            read_entry, slas_met = client.get(key)
+
+            read_stop_time = time.time()
 
         read_time = read_stop_time - read_start_time
 
         self.read_times.append(read_time)
+
+        util_list = list()
+        for sla in slas_met:
+            util_list.append(sla.utility)
+
+        delivered_utility = max(util_list)
+
+        self.average_utility.append(delivered_utility)
 
         if self.verbose or self.really_verbose:
 
