@@ -115,4 +115,4 @@ To check the correctness of the whole system, you can run the Client.py. The mai
                                 the DB to collect data on [default: 1000]
     ```
 
-3. Results and plots are generated in "generated_report" directory.
+3. Results and plots are generated in "generated_reports" directory.
