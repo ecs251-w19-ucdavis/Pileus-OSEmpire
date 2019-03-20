@@ -91,7 +91,7 @@ To check the correctness of the whole system, you can run the Client.py. The mai
     
     ```
 
-    * General usage information and options: `$ python main.py -h`:
+    * General usage information and options: `$ python Benchmark.py -h`:
     ``` bash
     Usage:
         main.py [options]
