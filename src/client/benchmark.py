@@ -137,7 +137,7 @@ class Benchmark():
         if setup:
             self.setup(client)
 
-        client.end_session(session)       
+        client.end_session()       
 
     def setup(self, client):
         """ This function runs all of the setup commands for benchmarking. By
