@@ -1,10 +1,11 @@
 """
 Benchmarking Application
+Adapted from BenchmarkDB (https://github.com/kmjungersen/BenchmarkDB)
 ===========================
 
 Main.py
 
-This file houses the core of the application, and is where all of the
+This file houses the benchmarking application, and is where all of the
 read/write commands are issued from, timed, and all data is analyzed.  Results
 from the trials are printed to the console by default, and are also printed to
 a markdown file to keep a record of.
@@ -12,7 +13,7 @@ a markdown file to keep a record of.
     Usage:
         main.py [options]
         main.py --list
-        main.py <database> <report_title> [options]
+        main.py <report_title> [options]
 
     Options:
         -h --help           Show this help screen
@@ -112,7 +113,7 @@ class Benchmark():
         self.time_and_date = time.strftime("%a, %d %b, %Y at %H:%M:%S")
         self.report_date = time.strftime("%b%d-%Y--%H-%M")
 
-        # Invoke sla and client
+        # Invoke SLA and Client
         config_file_path = '../../data/Global.conf'
 
         monitor = Monitor()
@@ -133,6 +134,7 @@ class Benchmark():
 
         client.begin_session('table1', sla_list)
 
+        # Run the Benchmark
         if setup:
             self.setup(client)
 

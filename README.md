@@ -53,3 +53,38 @@ ReplicationAgent: A basic implementation of a service that periodically update s
 
 # How to run primary/secondary servers
 To run a server, you need to run the StorageNode.py python file. It will instantiate Database and Replication Agent as well. The default parameters are set to make the running server as a Primary node. To make the node as a secondary node, you need to change the isPrimary variable in the StorageNode.py file to false.
+
+# Benchmarking Application
+1. To run, you need to install the following dependencies:
+
+   ``` bash
+    $ tabulate
+    $ clint
+    $ rpyc
+    $ docopt
+    $ seaborn
+    ```
+
+2. Set up a Storage Node as Primary (You can also set any number of Secondary replicas). Update the configuration file with their public IP addresses. 
+    
+3. Run the app!
+
+    ```
+    $ cd /src/client
+    $ python Benchmark.py [options]
+    ```
+    
+    Examples:
+    
+    ``` bash
+    # Benchmark 3000 reads and writes of mongo separately, with randomly ordered reads
+    $ python main.py mongodb -c --split --trials=3000
+    
+    # Benchmark Riak 2.0 with 10000 reads and writes, each with two 1000 character fields, 
+    # and then generate a CSV file of the raw data
+    $ python main.py riak2db --csv --trials=10000 --length=1000
+    
+    # Run the application in debug mode, which generates a Normal (Gaussian) data set for 
+    # analysis and debugging
+    $ python main.py --debug
+    ```
