@@ -187,7 +187,6 @@ class Client:
         node_return, status, result_str, high_timestamp = self.session.storage_node.get(self.session.table_name, key)
         # Calculate the end time
         end = time.time()
-        print(node_return, status, result_str, high_timestamp)
         # Calculate the elapsed time
         elapsed = end-start
 
@@ -366,15 +365,17 @@ if __name__ == "__main__":
     print(client.monitor.node_dictionary)
 
     print('----------')
+
     value, met = client.get('key1')
     print('value: ' + str(value))
+    print('The following SLAs were met: ')
     for m in met:
         print(m.consistency.type_str, ' ', m.latency, ' ', m.utility)
     print('----------')
 
-
     value, met = client.get('key1')
     print('value: ' + str(value))
+    print('The following SLAs were met: ')
     for m in met:
         print(m.consistency.type_str, ' ', m.latency, ' ', m.utility)
 
