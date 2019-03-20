@@ -335,11 +335,11 @@ if __name__ == "__main__":
 
     config_file_path = '../../data/Global.conf'
 
-    monitor = Monitor()
+    monitor = Monitor(debug_mode=True)
 
     monitor.send_probe()
 
-    client = Client(monitor, config_file_path)
+    client = Client(monitor, config_file_path, debug_mode=True)
 
     client.create_table('table1')
     client.create_table('table2')
@@ -360,9 +360,8 @@ if __name__ == "__main__":
     # Assume that begin session is called before any put and get operations
     client.begin_session('table1', sla_list)
 
-    client.put('key1', 1)
-    client.put('key2', 5)
-    client.put('key1', 15)
+    for i in range(0, 100):
+        client.put('key' + str(i), i)
 
     print(client.monitor.node_dictionary)
 

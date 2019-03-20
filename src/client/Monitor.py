@@ -70,8 +70,6 @@ class Monitor:
 
         for node_identifier in self.all_node_ip_list:
             start = time.time()
-            print(node_identifier)
-            print(port_number)
             # high_timetsamp = rpyc.connect(node_identifier, port_number).root.get_probe()
             high_timestamp, ht_status = rpyc.connect(node_identifier, port_number).root.get_probe()
             print('send_probe: ', high_timestamp)
