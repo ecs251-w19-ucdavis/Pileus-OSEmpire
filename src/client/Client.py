@@ -8,7 +8,7 @@ import random
 
 class Client:
 
-    def __init__(self, monitor, config_file_path):
+    def __init__(self, monitor, config_file_path, debug_mode=False):
         # An instance of Monitor class, which is updated and queried
         self.monitor = monitor
 
@@ -24,7 +24,7 @@ class Client:
 
         # Stores the ip addresses of all secondary nodes available
         self.secondary_nodes_ip_list = self.config.get('Secondary', 'IPs').split(',')
-        print(self.secondary_nodes_ip_list)
+        #print(self.secondary_nodes_ip_list)
         # Stores the ip address of the primary node
         self.primary_node_ip = self.config.get('Primary', 'IP')
 
@@ -34,6 +34,9 @@ class Client:
 
         # Used for all requests to Storage Nodes
         self.session = Session(None, None)
+
+        # Turn debug mode on, if needed
+        self.debug_mode = debug_mode
 
     def set_nodes_ip_list(self):
         # In case some address changes, set it with this function
@@ -164,11 +167,18 @@ class Client:
         # For now, just pick the first out of best_nodes
         target_sla, best_nodes = self.select_target(sla, self.all_node_ip_list, key)
 
+        if self.debug_mode:
+            print('target sla is: ' + target_sla.consistency.type_str, ' ', target_sla.latency, ' ', target_sla.utility)
+            print('best nodes are: ' + str(best_nodes))
+
         # Choose the first node out of best nodes
         node_address = best_nodes[0]
 
         # Connect to the chose node
         self.session.connect_to_server(node_address)
+
+        if self.debug_mode:
+            print('connected to ' + node_address)
 
         # Measure the start time for latency calculation
         start = time.time()
@@ -181,6 +191,9 @@ class Client:
         # Calculate the elapsed time
         elapsed = end-start
 
+        if self.debug_mode:
+            print('get took: ' + str(elapsed) + ' seconds.')
+
         # TODO: pass information to monitor
         # If the get returned successfully
         if status:
@@ -191,6 +204,10 @@ class Client:
             #shahbaz:
             # ht_status, high_timestamp = node_return['high_timestamp']
             high_timestamp = node_return['high_timestamp']
+
+            if self.debug_mode:
+                print('the timestamp of the value was: ' + str(timestamp))
+                print('the high_timestamp of the node was: ' + str(high_timestamp))
 
             # Pass the information to the monitor
             # print('put', self.session.ip_address, high_timestamp)
@@ -256,7 +273,6 @@ class Client:
             return value, slas_met
         else:
             raise ValueError('Failed to make a Get request to server')
-
 
     def create_table(self, table_name):
         # check if we have a valid session object
